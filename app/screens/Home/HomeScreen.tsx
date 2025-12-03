@@ -1,13 +1,14 @@
+import DashboardScreen from '@/components/report-analysis/DashboardScreen';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-// import DashboardScreen from '../../components/report-analysis/DashboardScreen';
+
 
 
 const HomeScreen = () => {
   return (
     
       <View style={styles.container}>
-        {/* <DashboardScreen/> */} welcome to Home Screen
+        <DashboardScreen/>
       </View>
     
   );

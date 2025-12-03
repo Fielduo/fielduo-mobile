@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import HomeScreen from '../screens/Home/HomeScreen';
 import ProfileScreen from '../screens/Profile/ProfileScreen';
 import SettingsScreen from '../screens/Settings/SettingsScreen';
+import SearchMenu from '@/components/report-analysis/search-menu';
 
 const Tab = createBottomTabNavigator();
 
@@ -19,18 +20,27 @@ const BottomTabNavigator = () => {
           headerShown: false,
 
           tabBarIcon: ({ focused, color, size }) => {
-            let iconName = '';
+            // default icon — must be valid Ionicons name
+            let iconName: keyof typeof Ionicons.glyphMap = 'home';
 
-            if (route.name === 'Home') {
-              iconName = focused ? 'home' : 'home-outline';
-            } else if (route.name === 'Settings') {
-              iconName = focused ? 'settings' : 'settings-outline';
-            } else if (route.name === 'Profile') {
-              iconName = focused ? 'person' : 'person-outline';
+            switch (route.name) {
+              case 'Home':
+                iconName = focused ? 'home' : 'home-outline';
+                break;
+              case 'Search':
+                iconName = focused ? 'search' : 'search-outline';
+                break;
+              case 'Settings':
+                iconName = focused ? 'settings' : 'settings-outline';
+                break;
+              case 'Profile':
+                iconName = focused ? 'person' : 'person-outline';
+                break;
             }
 
-            return <Ionicons name={iconName as any} size={size} color={color} />;
+            return <Ionicons name={iconName} size={size} color={color} />;
           },
+
 
           tabBarActiveTintColor: '#6C63FF',
           tabBarInactiveTintColor: '#999',
@@ -52,6 +62,7 @@ const BottomTabNavigator = () => {
         })}
       >
         <Tab.Screen name="Home" component={HomeScreen} />
+        <Tab.Screen name="Search" component={SearchMenu} />
         <Tab.Screen name="Settings" component={SettingsScreen} />
         <Tab.Screen name="Profile" component={ProfileScreen} />
       </Tab.Navigator>

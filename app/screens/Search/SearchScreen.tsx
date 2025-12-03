@@ -1,6 +1,7 @@
+import SearchMenu from '@/components/report-analysis/search-menu';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-// import SearchMenu from '../../components/report-analysis/search-menu';
+
 
 
 
@@ -8,7 +9,7 @@ const SearchScreen = () => {
   return (
     
       <View style={styles.container}>
-        {/* <SearchMenu/> */}
+        <SearchMenu/>
       </View>
     
   );
