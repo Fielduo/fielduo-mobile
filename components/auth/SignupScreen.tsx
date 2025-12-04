@@ -15,8 +15,10 @@ import {
 
 import { useNavigation } from "@react-navigation/native";
 import { CountryPicker, CountryItem } from "react-native-country-codes-picker";
-import { signup } from "@/app/api/auth";
+
 import { Ionicons } from "@expo/vector-icons";
+import { offlineSignup } from "@/src/api/auth";
+
 
 
 export default function Signup() {
@@ -37,43 +39,38 @@ export default function Signup() {
     const [showCountryPicker, setShowCountryPicker] = useState(false);
     const [selectedFlag, setSelectedFlag] = useState("🇮🇳");
 
-    const handleSignup = async () => {
-        if (
-            !firstname ||
-            !lastname ||
-            !email ||
-            !phonenumber ||
-            !password ||
-            !confirmPassword
-        ) {
-            Alert.alert("Error", "All fields are required.");
-            return;
-        }
+const handleSignup = async () => {
+  if (!firstname || !lastname || !email || !phonenumber || !password || !confirmPassword) {
+    Alert.alert("Error", "All fields are required.");
+    return;
+  }
 
-        try {
-            setLoading(true);
-            const response = await signup({
-                firstname,
-                lastname,
-                email,
-                phonenumber,
-                password,
-                confirmPassword,
-                countryCode: `+${callingCode}`,
-            });
+  if (password !== confirmPassword) {
+    Alert.alert("Error", "Passwords do not match.");
+    return;
+  }
 
-            if (response.success) {
-                Alert.alert("Success", "Signup completed successfully!");
-                navigation.navigate("Login" as never);
-            } else {
-                Alert.alert("Error", response.message || "Signup failed");
-            }
-        } catch (err: any) {
-            Alert.alert("Error", err.message);
-        } finally {
-            setLoading(false);
-        }
-    };
+  setLoading(true);
+
+  try {
+    await offlineSignup({
+      firstname,
+      lastname,
+      email,
+      phonenumber,
+      password,
+      countryCode: `+${callingCode}`,
+    });
+
+    Alert.alert("Success", "Signup saved locally! Will sync automatically when online.");
+    navigation.navigate("Login" as never);
+  } catch (err: any) {
+    Alert.alert("Error", err.message || "Signup failed");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
     return (
         <KeyboardAvoidingView

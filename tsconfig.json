@@ -3,15 +3,16 @@
   "compilerOptions": {
     "strict": true,
     "paths": {
-      "@/*": [
-        "./*"
-      ]
-    }
+      "@/*": ["./*"]
+    },
+    "experimentalDecorators": true,     // ✅ enable decorators
+    "emitDecoratorMetadata": true        // ✅ emit type metadata for decorators
   },
   "include": [
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.ts",
-    "expo-env.d.ts"
-, "app/navigation/StackNavigator"  ]
+    "expo-env.d.ts",
+    "app/navigation/StackNavigator"
+  ]
 }

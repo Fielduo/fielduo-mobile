@@ -15,9 +15,10 @@ import {
 import { NavigationProp, useNavigation, useRoute } from "@react-navigation/native";
 import { useAuthStore } from "../../store/useAuthStore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { AuthStackParamList } from "@/app/navigation/StackNavigator/AuthNavigator";
-import { login } from "@/app/api/auth";
+
 import { Ionicons } from "@expo/vector-icons";
+import { AuthStackParamList } from "@/src/navigation/StackNavigator/AuthNavigator";
+import { login } from "@/src/api/auth";
 
 
 export default function LoginScreen() {

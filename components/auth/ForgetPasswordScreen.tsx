@@ -15,7 +15,7 @@ import {
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
-import { AuthStackParamList } from "@/app/navigation/StackNavigator/AuthNavigator";
+import { AuthStackParamList } from "@/src/navigation/StackNavigator/AuthNavigator";
 
 
 type ForgetPasswordNavProp = NativeStackNavigationProp<

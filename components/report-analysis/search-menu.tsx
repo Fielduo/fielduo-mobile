@@ -17,7 +17,7 @@ import Header from "../common/Header";
 import HeaderSection from "../common/HeaderSection";
 import { useAuthStore } from "../../store/useAuthStore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { api } from "@/app/api/cilent";
+import { api } from "@/src/api/cilent";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 // type SearchMenuNavigationProp = NativeStackNavigationProp<SearchMenuStackParamList>;

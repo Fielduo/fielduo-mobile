@@ -12,7 +12,7 @@ import {
 
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { AuthStackParamList } from "@/app/navigation/StackNavigator/AuthNavigator";
+import { AuthStackParamList } from "@/src/navigation/StackNavigator/AuthNavigator";
 import { Ionicons } from "@expo/vector-icons";
 
 
