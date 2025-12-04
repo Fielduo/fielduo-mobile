@@ -9,7 +9,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.santhiyak.fielduomobile",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -26,7 +30,6 @@
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
-    
     "plugins": [
       [
         "expo-splash-screen",
@@ -45,6 +48,11 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "ea59ec94-2301-4ca0-8f44-67ed5a2fff4a"
+      }
     }
   }
 }

@@ -10,7 +10,7 @@ import { syncOfflineSignups } from "@/src/api/auth";
 // Replace with your LOCAL IP when testing on real device
 // Example: "http://192.168.1.5:5000/v1/sync"
 // ----------------------------------------------------
-const API_URL = "http://10.0.2.2:5000/v1/sync";
+const API_URL = "http://10.0.2.2:5000/v1/sync"; // https://fielduo.com/v1/sync
 
 // ----------------------------------------------------
 // 🔄 MAIN SYNC FUNCTION
