@@ -17,7 +17,8 @@ import { useNavigation } from "@react-navigation/native";
 import { CountryPicker, CountryItem } from "react-native-country-codes-picker";
 
 import { Ionicons } from "@expo/vector-icons";
-import { offlineSignup } from "@/src/api/auth";
+import { signup, syncOfflineSignups } from "@/src/api/auth";
+
 
 
 
@@ -41,31 +42,33 @@ export default function Signup() {
 
 const handleSignup = async () => {
   if (!firstname || !lastname || !email || !phonenumber || !password || !confirmPassword) {
-    Alert.alert("Error", "All fields are required.");
+    Alert.alert('Error', 'All fields are required.');
     return;
   }
-
-  if (password !== confirmPassword) {
-    Alert.alert("Error", "Passwords do not match.");
-    return;
-  }
-
-  setLoading(true);
 
   try {
-    await offlineSignup({
+    setLoading(true);
+    const response = await signup({
       firstname,
       lastname,
       email,
       phonenumber,
       password,
+      confirmPassword,
       countryCode: `+${callingCode}`,
     });
 
-    Alert.alert("Success", "Signup saved locally! Will sync automatically when online.");
-    navigation.navigate("Login" as never);
+    if (response.success) {
+      Alert.alert('Success', response.message || 'Signup completed successfully!');
+      navigation.navigate('Login' as never);
+
+      // Trigger background sync
+      syncOfflineSignups();
+    } else {
+      Alert.alert('Error', response.message || 'Signup failed');
+    }
   } catch (err: any) {
-    Alert.alert("Error", err.message || "Signup failed");
+    Alert.alert('Error', err.message);
   } finally {
     setLoading(false);
   }

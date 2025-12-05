@@ -20,7 +20,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { AuthStackParamList } from "@/src/navigation/StackNavigator/AuthNavigator";
 import { login } from "@/src/api/auth";
 
-
 export default function LoginScreen() {
   const navigation = useNavigation<NavigationProp<AuthStackParamList>>();
   const route = useRoute();
@@ -30,90 +29,47 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // 👁 toggle state
+  const [showPassword, setShowPassword] = useState(false);
 
-// const handleLogin = async () => {
-//   if (!email || !password) {
-//     Alert.alert("Error", "Please enter email and password");
-//     return;
-//   }
+  const handleLogin = async () => {
+    if (!email || !password) {
+      return Alert.alert("Error", "Enter email & password");
+    }
 
-//   setLoading(true);
+    setLoading(true);
+    try {
+      const data = await login(email, password);
+      const { user, tokens } = data;
 
-//   try {
-//     // 🔹 Call backend login
-//     const data = await login(email, password);
+      if (!user) {
+        return Alert.alert("Login failed", "User data not found");
+      }
 
-//     // 🔹 Log the raw response
-//     console.log("➡️ Backend response:", data);
+      // Store user in Zustand
+      setUser(user);
 
-//     if (!data.success) {
-//       console.log("❌ Login failed message:", data.message);
-//       Alert.alert("Error", data.message || "Login failed");
-//       return;
-//     }
+      // Save token if available
+      if (tokens?.access) {
+        await AsyncStorage.setItem("authToken", tokens.access);
+      }
 
-//     // 🔹 Log user & tokens separately
-//     console.log("User object:", data.user);
-//     console.log("Tokens object:", data.tokens);
-
-//     const { user, tokens } = data;
-//     const token = tokens?.access;
-
-//     if (!token) {
-//       console.log("❌ No token received from server");
-//       Alert.alert("Error", "No token received from server");
-//       return;
-//     }
-
-//     // ✅ Store user and token in Zustand
-//     const authStore = useAuthStore.getState();
-//     authStore.setUser(user);
-//     authStore.setToken(token);
-
-//     console.log("✅ Login successful. Token stored:", token);
-
-//     Alert.alert("✅ Success", "Login successful!");
-
-//     // 🔹 Navigate
-//     if (from) {
-//       navigation.navigate(from as never);
-//     } else {
-//       navigation.navigate("Home" as never);
-//     }
-
-//   } catch (err: any) {
-//     console.error("Login error:", err);
-//     Alert.alert("Login failed", err.message || "Something went wrong");
-//   } finally {
-//     setLoading(false);
-//   }
-// };
-
-const handleLogin = async () => {
-  if (!email || !password) return Alert.alert("Error", "Enter email & password");
-
-  setLoading(true);
-  try {
-    const data = await login(email, password);
-    const { user, tokens } = data;
-    const token = tokens?.access;
-    if (!token) return Alert.alert("Error", "No token received from server");
-
-    // Store in Zustand
-    const authStore = useAuthStore.getState();
-    authStore.setUser(user);
-
-    // ✅ Store token in AsyncStorage so ApiWrapper can read it
-    await AsyncStorage.setItem('authToken', token);
-
-    Alert.alert("Success", "Login successful!");
-  } catch (err: any) {
-    Alert.alert("Login failed", err.message || "Something went wrong");
-  } finally {
-    setLoading(false);
-  }
-};
+      Alert.alert("Success", "Login successful!", [
+        {
+          text: "OK",
+          // onPress: () => {
+          //   // Navigate after login
+          //   if (from) navigation.navigate(from as keyof AuthStackParamList);
+          //   else navigation.navigate("Home" as keyof AuthStackParamList); // replace with your main screen
+          // },
+        },
+      ]);
+    } catch (err: any) {
+      console.log("Login error:", err);
+      Alert.alert("Login failed", err.message || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
 <KeyboardAvoidingView
