@@ -12,15 +12,16 @@ import {
 
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-// import { SearchMenuStackParamList } from "../../navigation/StackNavigator.tsx/SearchmenuNavigator";
+
 import Header from "../common/Header";
 import HeaderSection from "../common/HeaderSection";
 import { useAuthStore } from "../../store/useAuthStore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { api } from "@/src/api/cilent";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 
-// type SearchMenuNavigationProp = NativeStackNavigationProp<SearchMenuStackParamList>;
+type SearchMenuNavigationProp = NativeStackNavigationProp<SearchMenuStackParamList>;
 type MenuIconName =
   | "view-dashboard-outline"
   | "map-marker-outline"
@@ -94,7 +95,7 @@ const menuSections: {
 ];
 
 export default function SearchMenu() {
-  // const navigation = useNavigation<SearchMenuNavigationProp>();
+  const navigation = useNavigation<SearchMenuNavigationProp>();
   const setUser = useAuthStore((state) => state.setUser);
   const currentUser = useAuthStore((state) => state.user); // ✅ get current user
 
@@ -109,10 +110,10 @@ export default function SearchMenu() {
             await api.clearToken(); // clear Axios token
             setUser(null); // reset Zustand user
 
-            // navigation.reset({
-            //   index: 0,
-            //   routes: [{ name: "Login" as never }],
-            // });
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "Login" as never }],
+            });
           } catch (error) {
             console.error("Error logging out:", error);
             Alert.alert("Error", "Failed to log out. Please try again.");
@@ -147,7 +148,7 @@ export default function SearchMenu() {
               {section.items.map((item, index) => (
                 <Pressable
                   key={index}
-                  // onPress={() => navigation.navigate(item.route as never)}
+                  onPress={() => navigation.navigate(item.route as never)}
                   style={({ pressed }) => [
                     styles.menuItem,
                     pressed && styles.menuItemPressed,

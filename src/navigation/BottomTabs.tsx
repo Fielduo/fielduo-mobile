@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import HomeScreen from '../screens/Home/HomeScreen';
 import ProfileScreen from '../screens/Profile/ProfileScreen';
 import SettingsScreen from '../screens/Settings/SettingsScreen';
-import SearchMenu from '@/components/report-analysis/search-menu';
+import SearchmenuNavigator from './StackNavigator/SearchmenuNavigator';
 
 const Tab = createBottomTabNavigator();
 
@@ -62,7 +62,7 @@ const BottomTabNavigator = () => {
         })}
       >
         <Tab.Screen name="Home" component={HomeScreen} />
-        <Tab.Screen name="Search" component={SearchMenu} />
+    <Tab.Screen name="Search" component={SearchmenuNavigator} />
         <Tab.Screen name="Settings" component={SettingsScreen} />
         <Tab.Screen name="Profile" component={ProfileScreen} />
       </Tab.Navigator>

@@ -4,6 +4,7 @@ import SearchMenu from '@/components/report-analysis/search-menu';
 import DashboardScreen from '@/components/report-analysis/DashboardScreen';
 import WorkOrder from '@/components/fsm/view/WorkOrder';
 import CreateWorkOrderForm from '@/components/fsm/form/CreateWorkOrder';
+import TripLog from '@/components/fsm/view/Triplog';
 // import WorkForce from '../../components/fsm/view/WorkForce';
 
 // import AssetCard from '../../components/fsm/view/AssetCard';
@@ -27,7 +28,7 @@ import CreateWorkOrderForm from '@/components/fsm/form/CreateWorkOrder';
 // import ServiceReport from '../../components/fsm/view/ServiceReport';
 // import ServiceReportForm from '../../components/fsm/form/ServiceReportForm';
 // import TripLogForm from '../../components/fsm/form/TripLogForm';
-// import TripLog from '../../components/fsm/view/Triplog';
+
 
 // import QuotesScreen from '../../components/Billing/view/Quotes';
 // import Invoices from '../../components/Billing/view/Invoices';
@@ -86,7 +87,7 @@ export type SearchMenuStackParamList = {
 //   WorkCompletionForm: { mode: 'create' | 'edit' | 'view'; workCompletion?: any; };
 //   ServiceReport: undefined;
 //   ServiceReportForm: { mode: 'create' | 'edit' | 'view'; report?: any };
-//   TripLog: undefined;
+  TripLog: undefined;
 //   TripLogForm: { mode: 'create' | 'view' | 'edit'; data?: any };
 
 //   // Billing
@@ -115,6 +116,9 @@ export default function SearchmenuNavigator() {
       <Stack.Screen name="Workorder" component={WorkOrder} />
       <Stack.Screen name="CreateWorkorder" component={CreateWorkOrderForm} />
 
+ <Stack.Screen name="TripLog" component={TripLog} />
+       {/* <Stack.Screen name="TripLogForm" component={TripLogForm} />  */}
+
        {/* <Stack.Screen name="Contact" component={Contact} />
        <Stack.Screen name="ContactForm" component={ContactForm} />
        <Stack.Screen name="Account" component={AccountsScreen} />       
@@ -138,8 +142,7 @@ export default function SearchmenuNavigator() {
        <Stack.Screen name="WorkCompletionForm" component={WorkCompletionForm} />
        <Stack.Screen name="ServiceReport" component={ServiceReport} />
        <Stack.Screen name="ServiceReportForm" component={ServiceReportForm} />
-       <Stack.Screen name="TripLog" component={TripLog} />
-       <Stack.Screen name="TripLogForm" component={TripLogForm} /> */}
+      
 
        {/* billing */}
 

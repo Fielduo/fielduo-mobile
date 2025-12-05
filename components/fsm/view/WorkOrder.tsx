@@ -11,8 +11,9 @@ import Header from "../../common/Header";
 import HeaderSection from "../../common/HeaderSection";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { SearchMenuStackParamList } from "../../../navigation/StackNavigator.tsx/SearchmenuNavigator";
-import { api } from "../../../api/client";
+import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
+import { api } from "@/src/api/cilent";
+
 
 
 interface DropdownOption {
