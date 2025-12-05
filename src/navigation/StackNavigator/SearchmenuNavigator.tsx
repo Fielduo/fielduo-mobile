@@ -1,12 +1,16 @@
-// import React from 'react';
-// import { createNativeStackNavigator, NativeStackScreenProps } from '@react-navigation/native-stack';
+import React from 'react';
+import { createNativeStackNavigator, NativeStackScreenProps } from '@react-navigation/native-stack';
+import SearchMenu from '@/components/report-analysis/search-menu';
+import DashboardScreen from '@/components/report-analysis/DashboardScreen';
+import WorkOrder from '@/components/fsm/view/WorkOrder';
+import CreateWorkOrderForm from '@/components/fsm/form/CreateWorkOrder';
 // import WorkForce from '../../components/fsm/view/WorkForce';
-// import SearchMenu from '../../components/report-analysis/search-menu';
+
 // import AssetCard from '../../components/fsm/view/AssetCard';
 // import CreateAssetForm from '../../components/fsm/form/AssetForm';
 // import Inventory from '../../components/fsm/view/Inventory';
-// import WorkOrder from '../../components/fsm/view/WorkOrder';
-// import CreateWorkOrderForm from '../../components/fsm/form/WorkOrder';
+
+
 // import CreateInventoryForm from '../../components/fsm/form/InventoryForm';
 // import CreateWorkSpaceForm from '../../components/fsm/form/WorkForceForm';
 // import ScheduleScreen from '../../components/fsm/view/Schedule';
@@ -44,10 +48,11 @@
 
 
 
-// // ✅ Define type for all routes in this navigator
-// export type SearchMenuStackParamList = {
-//   SearchMenu: undefined;
-//   DashboardScreen: undefined;
+
+// ✅ Define type for all routes in this navigator
+export type SearchMenuStackParamList = {
+  SearchMenu: undefined;
+  DashboardScreen: undefined;
 
 //   //CRM
 //   Account:undefined;
@@ -62,8 +67,8 @@
 //   Assets: undefined;
 //   CreateAsset: { mode: 'create' | 'edit' | 'view'; asset?: Asset };
 //   Inventory: undefined;
-//   Workorder: undefined;
-//   CreateWorkorder: { mode: 'create' | 'edit' | 'view'; workorder?: WorkOrder };
+  Workorder: undefined;
+  CreateWorkorder: { mode: 'create' | 'edit' | 'view'; workorder?: any };
 //   CreateInventory: { mode: 'create' | 'edit' | 'view'; inventory?: Inventory };
 //   Schedule: {
 //     employeeId: string;
@@ -97,62 +102,58 @@
 //     quote?: any;
 //   };
 
-// };
+};
 
-// // ✅ Create a typed stack navigator
-// const Stack = createNativeStackNavigator<SearchMenuStackParamList>();
+// ✅ Create a typed stack navigator
+const Stack = createNativeStackNavigator<SearchMenuStackParamList>();
 
-// export default function SearchmenuNavigator() {
-//   return (
-//     <Stack.Navigator screenOptions={{ headerShown: false }}>
-//       <Stack.Screen name="SearchMenu" component={SearchMenu} />
-//       <Stack.Screen name="DashboardScreen" component={DashboardScreen} />
-// {/* CRM */}
-//       <Stack.Screen name="Contact" component={Contact} />
-//  <Stack.Screen name="ContactForm" component={ContactForm} />
-// <Stack.Screen name="Account" component={AccountsScreen} />
-//       {/* FSM */}
-//       <Stack.Screen name="WorkForce" component={WorkForce} />
-//       <Stack.Screen name="ServiceContract" component={ServiceContract} />
-//       <Stack.Screen name="CreateServiceContract" component={CreateServiceContractScreen} />
-//       <Stack.Screen name="WorkForceForm" component={CreateWorkSpaceForm} />
-//       <Stack.Screen name="Assets" component={AssetCard} />
-//       <Stack.Screen name="CreateAsset" component={CreateAssetForm} />
-//       <Stack.Screen name="Inventory" component={Inventory} />
-//       <Stack.Screen name="CreateInventory" component={CreateInventoryForm} />
-//       <Stack.Screen name="Workorder" component={WorkOrder} />
-//       <Stack.Screen name="CreateWorkorder" component={CreateWorkOrderForm} />
-//       <Stack.Screen name="Schedule" component={ScheduleScreen} />
-//       <Stack.Screen name="MapRouteScreen" component={MapRouteScreen} />
-//       <Stack.Screen name="WorkOrders" component={ScheduleWorkOrdersScreen} />
-//       <Stack.Screen name="CreateSchedule" component={CreateScheduleScreen} />
-//       <Stack.Screen name="FieldWorkerTrip" component={FieldWorkerTrip} />
-//       <Stack.Screen name="CreateFieldWorkerTrip" component={CreateFieldWorkerTrip} />
-//       <Stack.Screen name="Vehicles" component={Vehicles} />
-//       <Stack.Screen name="VehicleForm" component={VehicleForm} />
-//       <Stack.Screen name="WorkCompletion" component={WorkCompletion} />
-//       <Stack.Screen name="WorkCompletionForm" component={WorkCompletionForm} />
-//       <Stack.Screen name="ServiceReport" component={ServiceReport} />
-//       <Stack.Screen name="ServiceReportForm" component={ServiceReportForm} />
-//       <Stack.Screen name="TripLog" component={TripLog} />
-//       <Stack.Screen name="TripLogForm" component={TripLogForm} />
+export default function SearchmenuNavigator() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="SearchMenu" component={SearchMenu} />
+      <Stack.Screen name="DashboardScreen" component={DashboardScreen} />
+      <Stack.Screen name="Workorder" component={WorkOrder} />
+      <Stack.Screen name="CreateWorkorder" component={CreateWorkOrderForm} />
 
-//       {/* billing */}
+       {/* <Stack.Screen name="Contact" component={Contact} />
+       <Stack.Screen name="ContactForm" component={ContactForm} />
+       <Stack.Screen name="Account" component={AccountsScreen} />       
+       <Stack.Screen name="WorkForce" component={WorkForce} />
+       <Stack.Screen name="ServiceContract" component={ServiceContract} />
+       <Stack.Screen name="CreateServiceContract" component={CreateServiceContractScreen} />
+       <Stack.Screen name="WorkForceForm" component={CreateWorkSpaceForm} />
+       <Stack.Screen name="Assets" component={AssetCard} />
+       <Stack.Screen name="CreateAsset" component={CreateAssetForm} />
+       <Stack.Screen name="Inventory" component={Inventory} />
+       <Stack.Screen name="CreateInventory" component={CreateInventoryForm} />
+      
+       <Stack.Screen name="Schedule" component={ScheduleScreen} />
+       <Stack.Screen name="MapRouteScreen" component={MapRouteScreen} />
+       <Stack.Screen name="WorkOrders" component={ScheduleWorkOrdersScreen} />
+       <Stack.Screen name="CreateSchedule" component={CreateScheduleScreen} />
+       <Stack.Screen name="FieldWorkerTrip" component={FieldWorkerTrip} />
+       <Stack.Screen name="CreateFieldWorkerTrip" component={CreateFieldWorkerTrip} />
+       <Stack.Screen name="Vehicles" component={Vehicles} />       <Stack.Screen name="VehicleForm" component={VehicleForm} />
+       <Stack.Screen name="WorkCompletion" component={WorkCompletion} />
+       <Stack.Screen name="WorkCompletionForm" component={WorkCompletionForm} />
+       <Stack.Screen name="ServiceReport" component={ServiceReport} />
+       <Stack.Screen name="ServiceReportForm" component={ServiceReportForm} />
+       <Stack.Screen name="TripLog" component={TripLog} />
+       <Stack.Screen name="TripLogForm" component={TripLogForm} /> */}
 
-//       <Stack.Screen name="Invoices" component={Invoices} />
-//       <Stack.Screen
-//         name="InvoicesForm"
-//         component={InvoicesForm}
-//       />
+       {/* billing */}
 
-//       <Stack.Screen name="CustomerFeedback" component={CustomerFeedback} />
-//       <Stack.Screen name="Payments" component={Payments} />
-//       <Stack.Screen name="Quotes" component={Quotes} />
-//       <Stack.Screen name="QuotesForm" component={QuotesForm} />
+       {/* <Stack.Screen name="Invoices" component={Invoices} />
+       <Stack.Screen
+         name="InvoicesForm"
+         component={InvoicesForm}
+       />
 
+       <Stack.Screen name="CustomerFeedback" component={CustomerFeedback} />
+       <Stack.Screen name="Payments" component={Payments} />
+       <Stack.Screen name="Quotes" component={Quotes} />
+       <Stack.Screen name="QuotesForm" component={QuotesForm} /> */}
 
-
-
-//     </Stack.Navigator>
-//   );
-// }
+</Stack.Navigator>
+   );
+ }
