@@ -2,9 +2,11 @@ import React from 'react';
 import { createNativeStackNavigator, NativeStackScreenProps } from '@react-navigation/native-stack';
 import SearchMenu from '@/components/report-analysis/search-menu';
 import DashboardScreen from '@/components/report-analysis/DashboardScreen';
-import WorkOrder from '@/components/fsm/view/WorkOrder';
-import CreateWorkOrderForm from '@/components/fsm/form/CreateWorkOrder';
+// import WorkOrder from '@/components/fsm/view/WorkOrder';
+// import CreateWorkOrderForm from '@/components/fsm/form/CreateWorkOrder';
 import TripLog from '@/components/fsm/view/Triplog';
+import TripLogForm from '@/components/fsm/form/TripLogForm';
+import Triplog from '@/components/fsm/view/Triplog';
 // import WorkForce from '../../components/fsm/view/WorkForce';
 
 // import AssetCard from '../../components/fsm/view/AssetCard';
@@ -68,8 +70,8 @@ export type SearchMenuStackParamList = {
 //   Assets: undefined;
 //   CreateAsset: { mode: 'create' | 'edit' | 'view'; asset?: Asset };
 //   Inventory: undefined;
-  Workorder: undefined;
-  CreateWorkorder: { mode: 'create' | 'edit' | 'view'; workorder?: any };
+  // Workorder: undefined;
+  // CreateWorkorder: { mode: 'create' | 'edit' | 'view'; workorder?: any };
 //   CreateInventory: { mode: 'create' | 'edit' | 'view'; inventory?: Inventory };
 //   Schedule: {
 //     employeeId: string;
@@ -88,7 +90,7 @@ export type SearchMenuStackParamList = {
 //   ServiceReport: undefined;
 //   ServiceReportForm: { mode: 'create' | 'edit' | 'view'; report?: any };
   TripLog: undefined;
-//   TripLogForm: { mode: 'create' | 'view' | 'edit'; data?: any };
+  TripLogForm: { mode: 'create' | 'view' | 'edit'; data?: any };
 
 //   // Billing
 //   Invoices: undefined;
@@ -113,11 +115,11 @@ export default function SearchmenuNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="SearchMenu" component={SearchMenu} />
       <Stack.Screen name="DashboardScreen" component={DashboardScreen} />
-      <Stack.Screen name="Workorder" component={WorkOrder} />
-      <Stack.Screen name="CreateWorkorder" component={CreateWorkOrderForm} />
+      {/* <Stack.Screen name="Workorder" component={WorkOrder} />
+      <Stack.Screen name="CreateWorkorder" component={CreateWorkOrderForm} /> */}
 
- <Stack.Screen name="TripLog" component={TripLog} />
-       {/* <Stack.Screen name="TripLogForm" component={TripLogForm} />  */}
+ <Stack.Screen name="TripLog" component={Triplog} />
+       <Stack.Screen name="TripLogForm" component={TripLogForm} /> 
 
        {/* <Stack.Screen name="Contact" component={Contact} />
        <Stack.Screen name="ContactForm" component={ContactForm} />

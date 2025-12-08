@@ -31,45 +31,29 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      return Alert.alert("Error", "Enter email & password");
-    }
+const handleLogin = async () => {
+  if (!email || !password) return Alert.alert("Error", "Enter email & password");
 
-    setLoading(true);
-    try {
-      const data = await login(email, password);
-      const { user, tokens } = data;
+  setLoading(true);
+  try {
+    const res = await login(email, password);
+    if (!res.success) return Alert.alert("Login failed", res.message);
 
-      if (!user) {
-        return Alert.alert("Login failed", "User data not found");
-      }
+    const user = res.user;
+    const token = res.tokens?.access;
+    if (!token) return Alert.alert("Error", "Token not received");
 
-      // Store user in Zustand
-      setUser(user);
+    useAuthStore.getState().setUser(user);
 
-      // Save token if available
-      if (tokens?.access) {
-        await AsyncStorage.setItem("authToken", tokens.access);
-      }
+    Alert.alert("Success", "Login successful!");
+  } catch (err) {
+    Alert.alert("Login failed", "Something went wrong");
+  } finally {
+    setLoading(false);
+  }
+};
 
-      Alert.alert("Success", "Login successful!", [
-        {
-          text: "OK",
-          // onPress: () => {
-          //   // Navigate after login
-          //   if (from) navigation.navigate(from as keyof AuthStackParamList);
-          //   else navigation.navigate("Home" as keyof AuthStackParamList); // replace with your main screen
-          // },
-        },
-      ]);
-    } catch (err: any) {
-      console.log("Login error:", err);
-      Alert.alert("Login failed", err.message || "Something went wrong");
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   return (
 <KeyboardAvoidingView

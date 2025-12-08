@@ -28,26 +28,32 @@ export default function AppNavigator() {
   const setUser = useAuthStore((state) => state.setUser);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const initAuth = async () => {
-      const token = await AsyncStorage.getItem('authToken');
-      if (token) {
-        try {
-          const res: MeResponse = await api.get('/me'); // token auto-sent
-          if (res.success && res.user) {
-            setUser(res.user); // set user in Zustand
-          } else {
-            await api.clearToken(); // remove invalid token
-          }
-        } catch (err) {
-          console.error('Error fetching current user:', err);
-          await api.clearToken(); // remove invalid token
+useEffect(() => {
+  const initAuth = async () => {
+    const token = await AsyncStorage.getItem('authToken');
+
+    if (token) {
+      try {
+        const res = await api.get<MeResponse>('/me');
+
+        if (res.success && res.user) {
+          setUser(res.user);
         }
+      } catch (err) {
+        console.log("⚠ Token invalid OR offline. Skipping /me check.");
       }
-      setLoading(false);
-    };
-    initAuth();
-  }, []);
+    } else {
+      const localUser = useAuthStore.getState().user;
+      if (localUser) {
+        console.log("🔄 Using offline stored user");
+      }
+    }
+
+    setLoading(false);
+  };
+
+  initAuth();
+}, []);
 
   if (loading) return null; // you can show a splash screen here
 
