@@ -5,6 +5,7 @@ import { api } from './cilent';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { syncDatabase } from '@/database/sync';
 import { database } from '@/database';
+import { FieldWorker, FieldWorkerTrip, Vehicle, VehiclePayload } from '@/types/Worker';
 interface SignupResponse { success: boolean; message?: string }
 
 interface LoginResponse {
@@ -193,4 +194,270 @@ export const createTripLog = async (formData: FormData) => {
 
 export const updateTripLog = async (id: string, formData: FormData) => {
   return await api.putMultipart(`/trip_logs/${id}`, formData);
+};
+
+
+// Work Force Api
+export const createWorker = async (data: FieldWorker) => api.post<FieldWorker>("/workerforce", data);
+
+export const updateWorker = async (id: string, data: FieldWorker) => api.put<FieldWorker>(`/workerforce/${id}`, data);
+
+export const getWorkers = async (): Promise<FieldWorker[]> => {
+  const res = await api.get<FieldWorker[]>("/workerforce");
+  return res; // no .data
+};
+
+export const deleteWorker = async (id: string) => api.delete<{ message: string }>(`/workerforce/${id}`);
+
+
+// ✅ FieldWorkTrip
+export const getTrips = async (): Promise<FieldWorkerTrip[]> => {
+  try {
+    const response = await api.get<FieldWorkerTrip[]>("/field_worker_trips");
+    return response;
+  } catch (error: any) {
+    console.error("❌ Error fetching trips:", error.response?.data || error.message);
+    throw new Error(error.response?.data?.error || "Failed to fetch trips");
+  }
+};
+// ✅ Create Trip
+export const createTrip = async (data: {
+  user_id: string;
+  work_order_id: string;
+  vehicle_id: string;
+  started_at: string;
+  ended_at: string;
+}) => {
+  try {
+    const res = await api.post("/field_worker_trips", data);
+    return res;
+  } catch (error: any) {
+    console.error("❌ Error creating trip:", error.response?.data || error.message);
+    throw new Error(error.response?.data?.error || "Failed to create trip");
+  }
+};
+// ✅ Update Trip
+export const updateTrip = async (
+  id: string,
+  data: {
+    user_id?: string;
+    work_order_id?: string;
+    vehicle_id?: string;
+    started_at?: string;
+    ended_at?: string;
+  }
+) => {
+  try {
+    const res = await api.put(`/field_worker_trips/${id}`, data);
+    return res;
+  } catch (error: any) {
+    console.error("❌ Error updating trip:", error.response?.data || error.message);
+    throw new Error(error.response?.data?.error || "Failed to update trip");
+  }
+};
+// ✅ Delete Trip
+export const deleteTrip = async (id: string) => {
+  try {
+    const res = await api.delete(`/field_worker_trips/${id}`);
+    return res;
+  } catch (error: any) {
+    console.error("❌ Error deleting trip:", error.response?.data || error.message);
+    throw new Error(error.response?.data?.error || "Failed to delete trip");
+  }
+};
+// ✅ Search Users
+export const searchUsers = async (query: string) => {
+  try {
+    const res = await api.get(`/field_worker_trips/users/search?q=${query}`);
+    return res;
+  } catch (error: any) {
+    console.error("❌ Error searching users:", error.response?.data || error.message);
+    return [];
+  }
+};
+// ✅ Search Work Orders
+export const searchWorkOrders = async (query: string) => {
+  try {
+    const res = await api.get(`/field_worker_trips/work_orders/search?q=${query}`);
+    return res;
+  } catch (error: any) {
+    console.error("❌ Error searching work orders:", error.response?.data || error.message);
+    return [];
+  }
+};
+// ✅ Search Vehicles
+export const searchVehicles = async (query: string) => {
+  try {
+    const res = await api.get(`/field_worker_trips/vehicles/search?q=${query}`);
+    return res;
+  } catch (error: any) {
+    console.error("❌ Error searching vehicles:", error.response?.data || error.message);
+    return [];
+  }
+};
+
+
+
+// 🔹 Vehicle 
+export const vehicleService = {
+  // ✅ Get All vehicle 
+  async getAll(): Promise<Vehicle[]> {
+    try {
+      const res = await api.get<Vehicle[]>("/vehicles");
+      return res; // ✅ Don't use res.data
+    } catch (err: any) {
+      console.error("❌ Error fetching vehicles:", err.response?.data || err.message);
+      throw new Error(err.response?.data?.error || "Failed to fetch vehicles");
+    }
+  },
+
+  // ✅ Get single vehicle by ID
+  async getById(id: string) {
+    try {
+      const res = await api.get(`/vehicles/${id}`);
+      return res;
+    } catch (err: any) {
+      console.error("❌ Error fetching vehicle:", err.response?.data || err.message);
+      throw new Error(err.response?.data?.error || "Failed to fetch vehicle");
+    }
+  },
+
+  // ✅ Create a new vehicle
+  async create(data: VehiclePayload) {
+    try {
+      const res = await api.post("/vehicles", data);
+      return res;
+    } catch (err: any) {
+      console.error("❌ Error creating vehicle:", err.response?.data || err.message);
+      throw new Error(err.response?.data?.error || "Failed to create vehicle");
+    }
+  },
+
+  // ✅ Update existing vehicle
+  async update(id: string, data: VehiclePayload) {
+    try {
+      const res = await api.put(`/vehicles/${id}`, data);
+      return res;
+    } catch (err: any) {
+      console.error("❌ Error updating vehicle:", err.response?.data || err.message);
+      throw new Error(err.response?.data?.error || "Failed to update vehicle");
+    }
+  },
+
+  // ✅ Delete a vehicle
+  async remove(id: string) {
+    try {
+      const res = await api.delete(`/vehicles/${id}`);
+      return res;
+    } catch (err: any) {
+      console.error("❌ Error deleting vehicle:", err.response?.data || err.message);
+      throw new Error(err.response?.data?.error || "Failed to delete vehicle");
+    }
+  },
+};
+
+
+//WorkCompletion
+export const workCompletionService = {
+  // 🔹 Get all work completion statuses
+  async getAll(): Promise<any[]> {
+    try {
+      const res = await api.get<any[]>("/work_completion_status");
+      return res; // no .data needed
+    } catch (err: any) {
+      console.error("❌ Error fetching work completion statuses:", err.response?.data || err.message);
+      throw new Error(err.response?.data?.error || "Failed to fetch work completion statuses");
+    }
+  },
+
+  // 🔹 Create new work completion record
+  async create(data: {
+    work_order_id: string;
+    status: string;
+    notes?: string;
+    verified_by: string;
+    verified_at?: string;
+  }) {
+    try {
+      const res = await api.post("/work_completion_status", data);
+      return res;
+    } catch (err: any) {
+      console.error("❌ Error creating work completion status:", err.response?.data || err.message);
+      throw new Error(err.response?.data?.error || "Failed to create record");
+    }
+  },
+
+  // 🔹 Update work completion record
+  async update(id: string, data: any) {
+    try {
+      const res = await api.put(`/work_completion_status/${id}`, data);
+      return res;
+    } catch (err: any) {
+      console.error("❌ Error updating work completion status:", err.response?.data || err.message);
+      throw new Error(err.response?.data?.error || "Failed to update record");
+    }
+  },
+
+  // 🔹 Delete work completion record
+  async remove(id: string) {
+    try {
+      const res = await api.delete(`/work_completion_status/${id}`);
+      return res;
+    } catch (err: any) {
+      console.error("❌ Error deleting work completion status:", err.response?.data || err.message);
+      throw new Error(err.response?.data?.error || "Failed to delete record");
+    }
+  },
+
+  // 🔹 Search work orders for dropdown
+  async searchWorkOrders(query: string) {
+    try {
+      const res = await api.get(`/work_completion_status/work_orders/search?q=${query}`);
+      return res;
+    } catch (err: any) {
+      console.error("❌ Error searching work orders:", err.response?.data || err.message);
+      return [];
+    }
+  },
+
+  // 🔹 Search users for dropdown
+  async searchUsers(query: string) {
+    try {
+      const res = await api.get(`/work_completion_status/users/search?q=${query}`);
+      return res;
+    } catch (err: any) {
+      console.error("❌ Error searching users:", err.response?.data || err.message);
+      return [];
+    }
+  },
+};
+
+export type QuoteResponse = {
+  success: boolean;
+  quotes: {
+    id: string;
+    quote_number: string;
+    customer_name: string;
+    organization_name: string;
+    status: string;
+    total_amount: number;
+    currency: string;
+    valid_until: string;
+  }[];
+};
+
+export const quoteService = {
+  async getQuotes(): Promise<QuoteResponse> {
+    return await api.get<QuoteResponse>("/quotes");
+  }
+};
+
+export const InvoiceService = {
+  createInvoice: async (payload: any) => {
+    return await api.post("/invoices", payload);
+  },
+
+  updateInvoice: async (id: string, payload: any) => {
+    return await api.put(`/invoices/${id}`, payload);
+  },
 };
