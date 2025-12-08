@@ -1,11 +1,11 @@
 
-interface WorkerAddress {
+export interface WorkerAddress {
   street: string;
   city: string;
   state: string;
   country: string;
 }
-type FieldWorker = {
+export type FieldWorker = {
 
   full_name: string;
   dob?: string;
@@ -21,8 +21,9 @@ type FieldWorker = {
   country?: string; // <-- add this
   permanent_address?: WorkerAddress;
   gov_id?: string;
-  skills?: string;
-  certificate?:string;
+  skills: string[];
+certificate: string[];
+ experience_years:number;
   availability?: string;
   work_location?: string;
   gps?: string;
@@ -33,7 +34,8 @@ type FieldWorker = {
    
 }
 
-interface FieldWorkerTrip {
+
+ export type FieldWorkerTrip = {
   id: string;
   user_id: string;
   user_name: string;
@@ -46,7 +48,7 @@ interface FieldWorkerTrip {
 }
 
 // 🔹 Define the expected shape of a vehicle payload
-type VehiclePayload = {
+export type VehiclePayload = {
   plate_number: string;
   model: string;
   type: string;
@@ -54,7 +56,7 @@ type VehiclePayload = {
   status?: string;
 }
 
-type Vehicle = {
+export type Vehicle = {
   id: string;
   plate_number: string;
   gps_device_id?: string;
@@ -63,7 +65,7 @@ type Vehicle = {
   status: "Active" | "Inactive";
 };
 
-type Asset = {
+export type Asset = {
   id: string;
   asset_name: string;
   asset_number: string;
@@ -81,9 +83,13 @@ type Asset = {
   installation_date?: string;
   purchased_date?: string;
   warranty_expiration?: string;
+   created_by_name?: string;
+  updated_by_name?: string;
+  created_at?: string;
+  updated_at?: string;
 };
 
- type WorkOrder = {
+ export type WorkOrder = {
   id: string;
   title?: string;
   type?: string;
@@ -123,9 +129,17 @@ type Asset = {
   asset_name?: string;
   customer_contact_name?: string;
   contact_name?: string;
+   created_by_name?: string;
+  updated_by_name?: string;
+  created_at?: string;
+  updated_at?: string;
+  required_technicians?: number;
+vehicle_requirements?: string; // or number if ID
+vehicle_name?: string; // optional for display
+
 };
 
-type Inventory = {
+export type Inventory = {
   item_id: number;
   org_id: string;
   item_number: string;
@@ -158,7 +172,7 @@ type Inventory = {
   last_purchase_date: string;
   last_sale_date: string;
 }
-type ServiceContract = {
+export type ServiceContract = {
   id: string;
   contractNumber: string;
   contractName: string;
@@ -170,7 +184,7 @@ type ServiceContract = {
 };
 
 
-type SchedulePayload = {
+export type SchedulePayload = {
   workOrder: string;
   startDate: string; // ISO string
   endDate: string;   // ISO string
@@ -181,7 +195,7 @@ type SchedulePayload = {
   notes?: string;
 }
 
- type ServiceContractPayload = {
+ export type ServiceContractPayload = {
    id: string;
    contract_owner: string
   contract_number: string
@@ -213,25 +227,25 @@ type SchedulePayload = {
   shipping_country: string
 };
 
-type JobItem = {
+ export type JobItem = {
   latitude: string;
   longitude: string;
   schedule_status: "Scheduled" | "Rescheduled" | "Completed" | "Missed" | string;
   route_order?: number;
 };
 
-type UserLocation = {
+ export type UserLocation = {
   latitude: number;
   longitude: number;
 };
 
-type RouteMapProps = {
+ export type RouteMapProps = {
   jobs: JobItem[];
   userLocation: UserLocation;
   onOptimizeRoute: () => void;
 };
 
-type JobSchedule = {
+ export type JobSchedule = {
   id: string | null;
   assigned_to: string |{ id: string; name: string };
 
@@ -263,7 +277,7 @@ type JobSchedule = {
   [key: string]: any;
 };
 
-type Job = {
+ export type Job = {
   id: string;
   work_order_title: string;
   schedule_status: string;
@@ -273,7 +287,7 @@ type Job = {
   assigned_to_name:string
 };
 
-type LineItem = {
+ export type LineItem = {
   id: string;
   type: "service" | "product";
   name: string;

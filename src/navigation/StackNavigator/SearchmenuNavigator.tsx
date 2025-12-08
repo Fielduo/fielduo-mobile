@@ -7,10 +7,16 @@ import DashboardScreen from '@/components/report-analysis/DashboardScreen';
 import TripLog from '@/components/fsm/view/Triplog';
 import TripLogForm from '@/components/fsm/form/TripLogForm';
 import Triplog from '@/components/fsm/view/Triplog';
+import AssetCard from '@/components/fsm/view/AssetCard';
+import AssetsForm from '@/components/fsm/form/AssetsForm';
+import { Asset , FieldWorkerTrip } from '@/types/Worker';
+
+
+import CreateFieldWorkerTrip from '@/components/fsm/form/FieldWorkerTripForm';
+import FieldTrip from '@/components/fsm/view/FieldTrip';
 // import WorkForce from '../../components/fsm/view/WorkForce';
 
-// import AssetCard from '../../components/fsm/view/AssetCard';
-// import CreateAssetForm from '../../components/fsm/form/AssetForm';
+
 // import Inventory from '../../components/fsm/view/Inventory';
 
 
@@ -67,8 +73,8 @@ export type SearchMenuStackParamList = {
 //   // FSM
 //   WorkForce: undefined;
 //   WorkForceForm: { mode: 'create' | 'view' | 'edit'; worker?: FieldWorker };
-//   Assets: undefined;
-//   CreateAsset: { mode: 'create' | 'edit' | 'view'; asset?: Asset };
+  Assets: undefined;
+  CreateAsset: { mode: 'create' | 'edit' | 'view'; asset?: Asset };
 //   Inventory: undefined;
   // Workorder: undefined;
   // CreateWorkorder: { mode: 'create' | 'edit' | 'view'; workorder?: any };
@@ -79,8 +85,8 @@ export type SearchMenuStackParamList = {
 //   };
 //   WorkOrders: undefined;
 //   CreateSchedule: { mode: "create" | "edit"; event?: JobSchedule };
-//   FieldWorkerTrip: undefined;
-//   CreateFieldWorkerTrip: { mode: 'create' | 'edit' | 'view'; trip?: FieldWorkerTrip };
+  FieldWorkerTrip: undefined;
+  CreateFieldWorkerTrip: { mode: 'create' | 'edit' | 'view'; trip?: FieldWorkerTrip };
 //   Vehicles: undefined;
 //   ServiceContract: undefined;
 //   CreateServiceContract: { mode: "create" | "edit" | "view"; servicecontract?: any; };
@@ -117,10 +123,13 @@ export default function SearchmenuNavigator() {
       <Stack.Screen name="DashboardScreen" component={DashboardScreen} />
       {/* <Stack.Screen name="Workorder" component={WorkOrder} />
       <Stack.Screen name="CreateWorkorder" component={CreateWorkOrderForm} /> */}
-
+      <Stack.Screen name="Assets" component={AssetCard} />
+       <Stack.Screen name="CreateAsset" component={AssetsForm} />
  <Stack.Screen name="TripLog" component={Triplog} />
        <Stack.Screen name="TripLogForm" component={TripLogForm} /> 
 
+       <Stack.Screen name="FieldWorkerTrip" component={FieldTrip} />
+       <Stack.Screen name="CreateFieldWorkerTrip" component={CreateFieldWorkerTrip} />
        {/* <Stack.Screen name="Contact" component={Contact} />
        <Stack.Screen name="ContactForm" component={ContactForm} />
        <Stack.Screen name="Account" component={AccountsScreen} />       
@@ -128,8 +137,7 @@ export default function SearchmenuNavigator() {
        <Stack.Screen name="ServiceContract" component={ServiceContract} />
        <Stack.Screen name="CreateServiceContract" component={CreateServiceContractScreen} />
        <Stack.Screen name="WorkForceForm" component={CreateWorkSpaceForm} />
-       <Stack.Screen name="Assets" component={AssetCard} />
-       <Stack.Screen name="CreateAsset" component={CreateAssetForm} />
+ 
        <Stack.Screen name="Inventory" component={Inventory} />
        <Stack.Screen name="CreateInventory" component={CreateInventoryForm} />
       
@@ -137,8 +145,7 @@ export default function SearchmenuNavigator() {
        <Stack.Screen name="MapRouteScreen" component={MapRouteScreen} />
        <Stack.Screen name="WorkOrders" component={ScheduleWorkOrdersScreen} />
        <Stack.Screen name="CreateSchedule" component={CreateScheduleScreen} />
-       <Stack.Screen name="FieldWorkerTrip" component={FieldWorkerTrip} />
-       <Stack.Screen name="CreateFieldWorkerTrip" component={CreateFieldWorkerTrip} />
+
        <Stack.Screen name="Vehicles" component={Vehicles} />       <Stack.Screen name="VehicleForm" component={VehicleForm} />
        <Stack.Screen name="WorkCompletion" component={WorkCompletion} />
        <Stack.Screen name="WorkCompletionForm" component={WorkCompletionForm} />

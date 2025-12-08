@@ -1,28 +1,27 @@
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
 import {
-  View,
+  Alert,
+  Image,
+  Linking,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Platform,
-  Image,
-  Alert,
-  PermissionsAndroid,
+  View
 } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 // import { launchCamera, launchImageLibrary } from "react-native-image-picker";
 import { Picker } from "@react-native-picker/picker";
-import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
+import * as ImagePicker from "expo-image-picker";
 
-import FormHeader from "../../common/FormHeader";
-import { api } from "@/src/api/cilent";
-import { Ionicons } from "@expo/vector-icons";
 import SearchDropdown from "@/components/common/searchDropdown";
 import { createTripLog, updateTripLog } from "@/src/api/auth";
+import { api } from "@/src/api/cilent";
+import { Ionicons } from "@expo/vector-icons";
+import FormHeader from "../../common/FormHeader";
 
 
 type Mode = "create" | "view" | "edit";
@@ -30,12 +29,50 @@ type Mode = "create" | "view" | "edit";
 type TripLog = {
   id?: string;
   trip_id?: string;
-  timestamp: string;
-  latitude: string;
-  longitude: string;
-  note: string;
+  timestamp?: string;
+  latitude?: string;
+  longitude?: string;
+  note?: string;
   photo?: string;
+
+  // Linking info
+  work_order_number?: string;
+  job_assignment_id?: string;
+  technician_name?: string;
+  vehicle_id?: string;
+
+  // Location & travel
+  site_name?: string;
+  site_address?: string;
+  gps_coordinates?: string;
+  start_odometer?: string;
+  end_odometer?: string;
+  total_duration?: string;
+  total_mileage?: string; // optional
+  travel_time?: string;
+
+  // Work performed
+  work_description?: string;
+  equipment_condition_id?: string;
+  parts_used?: string;
+  time_on_site?: string;
+
+  // Issues / observations
+  root_cause?: string;
+  resolution?: string;
+  technician_notes?: string;
+  job_status_id?: string;
+
+  // Media
+  photos?: { alt: string; path: string; originalName: string }[];
+  attachments?: { path: string; originalName: string }[];
+
+  trip_date?: string;
+  start_time?: string;
+  end_time?: string;
 };
+
+
 
 type RouteParams = {
   mode: Mode;
@@ -88,7 +125,10 @@ export default function TripLogForm() {
   const route = useRoute<RouteProp<Record<string, RouteParams>, string>>();
 
   const { mode: initialMode, data } =
-    route.params ?? { mode: "create", data: undefined };
+    (route.params as RouteParams) ?? { mode: "create", data: undefined };
+
+  const [mode, setMode] = useState<Mode>(initialMode);
+
 
   const [equipmentConditions, setEquipmentConditions] = useState<DropdownOption[]>([]);
   const [tripStatuses, setTripStatuses] = useState<DropdownOption[]>([]);
@@ -99,7 +139,7 @@ export default function TripLogForm() {
   const [startOdo, setStartOdo] = useState("");
   const [endOdo, setEndOdo] = useState("");
 
-  const [mode, setMode] = useState<Mode>(initialMode);
+
   const [form, setForm] = useState<TripLog>({
     trip_id: "",
     timestamp: "",
@@ -124,6 +164,7 @@ export default function TripLogForm() {
   const [workDescription, setWorkDescription] = useState("");
   const [timeOnSite, setTimeOnSite] = useState("");
   const [partsUsed, setPartsUsed] = useState("");
+  const [documentFiles, setDocumentFiles] = useState<any[]>([]);
 
   const [rootCause, setRootCause] = useState("");
   const [resolutionTaken, setResolutionTaken] = useState("");
@@ -215,16 +256,29 @@ export default function TripLogForm() {
     }
   };
 
-  // 📌 Document Picker
   const openDocument = async () => {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: ["application/pdf", "image/*"],
-    });
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "*/*",
+        multiple: true,
+        copyToCacheDirectory: true,
+      });
 
-    if (!result.canceled) {
-      setDocumentFile(result.assets[0]);
+      if (result.canceled) return;
+
+      const selectedDocs = result.assets.map(file => ({
+        name: file.name,
+        uri: file.uri,
+        file,
+      }));
+
+      setDocumentFiles(prev => [...prev, ...selectedDocs]);
+    } catch (error) {
+      console.log("DocumentPicker Error:", error);
     }
   };
+
+  // 📌 Document Picker
 
   const handleOpenPicker = (mode: PickerMode): void => {
     setShowPicker({ mode, visible: true });
@@ -264,24 +318,6 @@ export default function TripLogForm() {
   };
 
 
-
-
-  // Prefill values
-  useEffect(() => {
-    if (data) {
-      setForm({
-        id: data.id,
-        trip_id: data.trip_id ?? "",
-        timestamp: data.timestamp ?? "",
-        latitude: String(data.latitude ?? ""),
-        longitude: String(data.longitude ?? ""),
-        note: data.note ?? "",
-        photo: data.photo,
-      });
-      setImage(data.photo ?? null);
-    }
-  }, [data]);
-
   // Search Trip IDs
   const searchTrips = async (text: string) => {
     if (!text || text.length < 2) {
@@ -317,9 +353,6 @@ export default function TripLogForm() {
     }
   };
 
-  useEffect(() => {
-    fetchDropdowns();
-  }, []);
 
   const fetchWorkOrders = async () => {
     try {
@@ -337,11 +370,6 @@ export default function TripLogForm() {
       setWorkOrders([]);
     }
   };
-
-
-  useEffect(() => {
-    fetchWorkOrders();
-  }, []);
 
 
   const handleWorkOrderSelect = async (workOrderId: string) => {
@@ -428,123 +456,106 @@ export default function TripLogForm() {
   };
 
 
-  useEffect(() => {
-    fetchDropdowns();
-
-  }, []);
-
-
-
-const buildFormData = () => {
-  const fd = new FormData();
-
-  // Basic fields
-  fd.append("trip_id", form.trip_id || "");
-  fd.append("trip_date", date ? date.toISOString().split("T")[0] : "");
-  fd.append("start_time", startTime ? startTime.toISOString() : "");
-  fd.append("end_time", endTime ? endTime.toISOString() : "");
-  fd.append("total_duration", duration || "");
-
-  fd.append("work_order_number", formData.work_order_number || "");
-  fd.append("job_assignment_id", formData.job_assignment_id || "");
-  fd.append("technician_name", formData.technician_name || "");
-  fd.append("vehicle_id", formData.vehicle_id || "");
-  fd.append("site_name", formData.site_name || "");
-  fd.append("site_address", formData.site_address || "");
-  fd.append("gps_coordinates", formData.gps_coordinates || "");
-
-  fd.append("start_odometer", String(startOdo || 0));
-  fd.append("end_odometer", String(endOdo || 0));
-  fd.append("total_mileage", String(totalMileage || 0));
-  fd.append("time_on_site", String(timeOnSite || 0));
-
-  fd.append("work_description", workDescription || "");
-  fd.append("equipment_condition_id", selectedEquipmentCondition || "");
-  fd.append("parts_used", partsUsed || "");
-  fd.append("root_cause", rootCause || "");
-  fd.append("resolution", resolutionTaken || "");
-  fd.append("technician_notes", technicianNotes || "");
-  fd.append("job_status_id", selectedTripStatus || "");
-
-  // 🔥 PHOTOS JSON
-  const photosArr: any[] = [];
-  if (beforeImage) {
-    photosArr.push({
-      uri: beforeImage,
-      name: "before.jpg",
-      type: "image/jpeg",
-    });
-  }
-  if (afterImage) {
-    photosArr.push({
-      uri: afterImage,
-      name: "after.jpg",
-      type: "image/jpeg",
-    });
-  }
-  fd.append("photos", JSON.stringify(photosArr));
-
-  // 🔥 ATTACHMENTS JSON
-  const attachArr: any[] = [];
-  if (documentFile) {
-    attachArr.push({
-      uri: documentFile.uri,
-      name: documentFile.name,
-      type: documentFile.mimeType || "application/pdf",
-    });
-  }
-  fd.append("attachments", JSON.stringify(attachArr));
-
-  // Latitude/Longitude
-  if (form.latitude && form.longitude) {
-    fd.append("latitude", String(form.latitude));
-    fd.append("longitude", String(form.longitude));
-  }
-
-  return fd;
-};
-
-
-
-  // Save (create/update)
   const handleSave = async () => {
+    if (!form.trip_id?.trim()) {
+      Alert.alert("Validation", "Trip ID is required");
+      return;
+    }
+
     setSaving(true);
 
+    // Helper to format time as HH:mm:ss
+    const formatTimeForBackend = (date?: Date | null) => {
+      if (!date) return "";
+      const hrs = date.getHours().toString().padStart(2, "0");
+      const mins = date.getMinutes().toString().padStart(2, "0");
+      const secs = date.getSeconds().toString().padStart(2, "0");
+      return `${hrs}:${mins}:${secs}`;
+    };
+
     try {
-      const fd = buildFormData();
+      const fd = new FormData();
 
-      console.log("🚀 FORM DATA PAYLOAD START --------------");
+      // Basic trip fields
+      fd.append("trip_id", form.trip_id || "");
+      fd.append("trip_date", date ? date.toISOString().split("T")[0] : "");
+      fd.append("start_time", formatTimeForBackend(startTime));
+      fd.append("end_time", formatTimeForBackend(endTime));
+      fd.append("total_duration", duration || "");
 
-      const debugFd: any = fd;
-      debugFd._parts?.forEach((p: any) => {
-        console.log("KEY:", p[0]);
-        console.log("VALUE:", p[1]);
-      });
+      // Linking info
+      fd.append("work_order_number", formData.work_order_number || "");
+      fd.append("job_assignment_id", formData.job_assignment_id || "");
+      fd.append("technician_name", formData.technician_name || "");
+      fd.append("vehicle_id", formData.vehicle_id || "");
 
-      console.log("🚀 FORM DATA PAYLOAD END ----------------");
+      // Location & travel
+      fd.append("site_name", formData.site_name || "");
+      fd.append("site_address", formData.site_address || "");
+      fd.append("gps_coordinates", formData.gps_coordinates || "");
+      fd.append("start_odometer", String(startOdo || 0));
+      fd.append("end_odometer", String(endOdo || 0));
+      fd.append("total_mileage", totalMileage || "0");
+      fd.append("travel_time", String(timeOnSite || 0));
 
-      let response: any;
+      // Work performed details
+      fd.append("work_description", workDescription || "");
+      fd.append("equipment_condition_id", selectedEquipmentCondition || "");
+      fd.append("parts_used", partsUsed || "");
+      fd.append("time_on_site", String(timeOnSite || 0));
 
+      // Issues & observations
+      fd.append("root_cause", rootCause || "");
+      fd.append("resolution", resolutionTaken || "");
+      fd.append("technician_notes", technicianNotes || "");
+      fd.append("job_status_id", selectedTripStatus || "");
+      if (beforeImage) fd.append("photos", {
+        uri: beforeImage,
+        name: `before_${Date.now()}.jpg`,
+        type: "image/jpeg"
+      } as any);
+
+      if (afterImage) fd.append("photos", {
+        uri: afterImage,
+        name: `after_${Date.now()}.jpg`,
+        type: "image/jpeg"
+      } as any);
+
+      // Attachments
+      if (documentFile) fd.append("attachments", {
+        uri: documentFile.uri,
+        name: documentFile.name,
+        type: documentFile.mimeType || "application/pdf"
+      } as any);
+
+      // GPS
+      if (form.latitude) fd.append("latitude", String(form.latitude));
+      if (form.longitude) fd.append("longitude", String(form.longitude));
+
+      // Optional note
+      if (form.note) fd.append("note", form.note);
+
+      // Send to backend
+      let response;
       if (mode === "create") {
         response = await createTripLog(fd);
-        console.log("🌟 CREATE RESPONSE:", response.data);
-        Alert.alert("Success", "Trip log created");
+        Alert.alert("Success", "Trip log created successfully!");
       } else {
         response = await updateTripLog(String(form.id), fd);
-        console.log("🌟 UPDATE RESPONSE:", response.data);
-        Alert.alert("Success", "Trip log updated");
+        Alert.alert("Success", "Trip log updated successfully!");
       }
 
       navigation.goBack();
     } catch (err: any) {
-      console.log("❌ API Error:", err?.response?.data || err);
-      Alert.alert("Error", err?.response?.data?.error || "Save failed");
+      console.error("❌ Error saving trip log:", err?.response?.data || err);
+      Alert.alert(
+        "Error",
+        err?.response?.data?.error || err?.message || "Failed to save trip log"
+      );
     } finally {
       setSaving(false);
     }
   };
-
-
 
   // Delete
   const handleDelete = async () => {
@@ -557,6 +568,99 @@ const buildFormData = () => {
     }
   };
 
+  useEffect(() => {
+    fetchWorkOrders();
+    fetchDropdowns();
+  }, []);
+
+  useEffect(() => {
+    if (!data) return;
+
+    console.log("Prefilling TripLog data:", data);
+
+    // Prefill main form state
+    setForm({
+      ...data,
+      latitude: String(data.latitude ?? ""),
+      longitude: String(data.longitude ?? ""),
+    });
+
+    // Prefill linking info
+    const selectedWorkOrder = workOrders.find(
+      (w) => w.work_order_number === data.work_order_number
+    );
+
+    setFormData(prev => ({
+      ...prev,
+      work_order_number: selectedWorkOrder?.work_order_number ?? data.work_order_number ?? "",
+      work_order_id: selectedWorkOrder?.id ?? "",
+      title: selectedWorkOrder?.title ?? "",
+      job_assignment_id: data.job_assignment_id ?? "",
+      technician_name: data.technician_name ?? "",
+      vehicle_id: data.vehicle_id ?? "",
+      site_name: data.site_name ?? "",
+      site_address: data.site_address ?? "",
+      gps_coordinates: data.gps_coordinates ?? "",
+    }));
+
+    // Odometer & times
+    setStartOdo(data.start_odometer ?? "");
+    setEndOdo(data.end_odometer ?? "");
+    setDuration(data.total_duration ?? "");
+    setDate(data.trip_date ? new Date(data.trip_date) : null);
+    setStartTime(data.start_time ? new Date(`1970-01-01T${data.start_time}`) : null);
+    setEndTime(data.end_time ? new Date(`1970-01-01T${data.end_time}`) : null);
+
+    const baseURL = api.getBaseUrl?.() || "";
+
+    // 📸 Photos
+    if (Array.isArray(data?.photos) && data.photos.length > 0) {
+      setBeforeImage(`${baseURL}${data.photos[0].path}`);
+    }
+
+    if (Array.isArray(data?.photos) && data.photos.length > 1) {
+      setAfterImage(`${baseURL}${data.photos[1].path}`);
+    }
+
+    // 📄 Document Attachment
+    if (Array.isArray(data?.attachments) && data.attachments.length > 0) {
+      const file = data.attachments[0];
+      setDocumentFile({
+        name: decodeURIComponent(file.originalName || "Attachment"),
+        url: `${baseURL}${file.path}`,
+      });
+    } else {
+      setDocumentFile(null);
+    }
+
+
+    // Document (first attachment)
+    // 📄 Multiple Attachments
+    if (Array.isArray(data?.attachments) && data.attachments.length > 0) {
+      const baseURL = api.getBaseUrl?.() || "";
+      const files = data.attachments.map(att => ({
+        name: decodeURIComponent(att.originalName || "Attachment"),
+        url: `${baseURL}${att.path}`,
+      }));
+      setDocumentFiles(files);
+    } else {
+      setDocumentFiles([]);
+    }
+
+
+    // Dropdowns
+    setSelectedTripStatus(data.job_status_id ?? "");
+    setSelectedEquipmentCondition(data.equipment_condition_id ?? "");
+
+    // Work performed
+    setWorkDescription(data.work_description ?? "");
+    setPartsUsed(data.parts_used ?? "");
+    setTimeOnSite(data.time_on_site ?? "");
+    setRootCause(data.root_cause ?? "");
+    setResolutionTaken(data.resolution ?? "");
+    setTechnicianNotes(data.technician_notes ?? "");
+
+  }, [data, workOrders]);
 
 
   const headerTitle =
@@ -582,65 +686,136 @@ const buildFormData = () => {
       />
 
       <ScrollView contentContainerStyle={styles.container}>
+
         <Text style={styles.header}>Trip Log Details</Text>
 
-
-
-        {/* TRIP SEARCH ID */}
-        <SearchDropdown
-          label="Trip ID"
-          placeholder="Search Trip ID"
-          editable={mode !== "view"}
-          value={
-            tripResults.find((t) => t.id === form.trip_id)?.name ||
-            form.trip_id ||
-            ""
-          }
-          data={tripResults.map((t) => t.name)}
-          onSearch={searchTrips}
-          onSelect={(selectedName) => {
-            const selected = tripResults.find((t) => t.name === selectedName);
-            if (selected) handleChange("trip_id", selected.id);
-          }}
-        />
+        {mode === "view" ? (
+          <View style={styles.readOnlyView}>
+            <Text style={styles.label}>Trip ID</Text>
+            <Text style={styles.readOnlyText}>
+              {form.trip_id
+                ? tripResults.find((t) => t.id === form.trip_id)?.name || form.trip_id
+                : "-"}
+            </Text>
+          </View>
+        ) : (
+          <SearchDropdown
+            label="Trip ID"
+            placeholder="Search Trip ID"
+            editable={true}
+            value={
+              tripResults.find((t) => t.id === form.trip_id)?.name ||
+              form.trip_id ||
+              ""
+            }
+            data={tripResults.map((t) => t.name)}
+            onSearch={searchTrips}
+            onSelect={(selectedName) => {
+              const selected = tripResults.find((t) => t.name === selectedName);
+              if (selected) handleChange("trip_id", selected.id);
+            }}
+          />
+        )}
 
         {/* Core Trip Information */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>📄 Core Trip Information</Text>
 
           <View style={styles.row}>
+            {/* Date */}
             <View style={styles.col}>
               <Text style={styles.label}>Date *</Text>
-              <TouchableOpacity onPress={() => handleOpenPicker("date")}>
-                <TextInput style={styles.input} placeholder="dd-mm-yyyy" value={date ? date.toLocaleDateString() : ""}
-                  editable={false} />
-              </TouchableOpacity>
+              {mode === "view" ? (
+                <View style={styles.readOnlyView}>
+                  <Text style={styles.readOnlyText}>
+                    {date ? date.toLocaleDateString() : "-"}
+                  </Text>
+                </View>
+              ) : (
+                <TouchableOpacity onPress={() => handleOpenPicker("date")}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="dd-mm-yyyy"
+                    value={date ? date.toLocaleDateString() : ""}
+                    editable={false}
+                  />
+                </TouchableOpacity>
+              )}
             </View>
 
+            {/* Start Time */}
             <View style={styles.col}>
               <Text style={styles.label}>Start Time *</Text>
-              <TouchableOpacity onPress={() => handleOpenPicker("start")}>
-                <TextInput style={styles.input} placeholder="Select Time" value={startTime ? startTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}
-                  editable={false} />
-              </TouchableOpacity>
+              {mode === "view" ? (
+                <View style={styles.readOnlyView}>
+                  <Text style={styles.readOnlyText}>
+                    {startTime
+                      ? startTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                      : "-"}
+                  </Text>
+                </View>
+              ) : (
+                <TouchableOpacity onPress={() => handleOpenPicker("start")}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Select Time"
+                    value={startTime
+                      ? startTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                      : ""}
+                    editable={false}
+                  />
+                </TouchableOpacity>
+              )}
             </View>
           </View>
 
           <View style={styles.row}>
+            {/* End Time */}
             <View style={styles.col}>
               <Text style={styles.label}>End Time *</Text>
-              <TouchableOpacity onPress={() => handleOpenPicker("end")}>
-                <TextInput style={styles.input} placeholder="Select Time" value={endTime ? endTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}
-                  editable={false} />
-              </TouchableOpacity>
+              {mode === "view" ? (
+                <View style={styles.readOnlyView}>
+                  <Text style={styles.readOnlyText}>
+                    {endTime
+                      ? endTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                      : "-"}
+                  </Text>
+                </View>
+              ) : (
+                <TouchableOpacity onPress={() => handleOpenPicker("end")}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Select Time"
+                    value={endTime
+                      ? endTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                      : ""}
+                    editable={false}
+                  />
+                </TouchableOpacity>
+              )}
             </View>
 
+            {/* Total Duration */}
             <View style={styles.col}>
               <Text style={styles.label}>Total Duration</Text>
-              <TextInput style={styles.input} placeholder="Auto-calculated" value={duration} editable={false} />
+              {mode === "view" ? (
+                <View style={styles.readOnlyView}>
+                  <Text style={styles.readOnlyText}>
+                    {duration || "-"}
+                  </Text>
+                </View>
+              ) : (
+                <TextInput
+                  style={styles.input}
+                  placeholder="Auto-calculated"
+                  value={duration}
+                  editable={true}
+                />
+              )}
             </View>
           </View>
 
+          {/* DateTimePicker */}
           {showPicker.visible && (
             <DateTimePicker
               value={
@@ -655,8 +830,8 @@ const buildFormData = () => {
               onChange={handleChangetime}
             />
           )}
-
         </View>
+
 
         {/* Linked Assignment */}
         <View style={styles.card}>
@@ -664,38 +839,89 @@ const buildFormData = () => {
 
           <View style={styles.col}>
             <Text style={styles.label}>Work Order Number *</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={formData.work_order_number}
-                onValueChange={handleWorkOrderSelect}
-                style={styles.pickerStyle}
-              >
-                <Picker.Item label="Select Work Order" value="" />
+            {mode === "view" ? (
+              <View style={styles.readOnlyView}>
+                <Text style={styles.readOnlyText}>
+                  {/* Find the selected work order object based on formData.work_order_number */}
+                  {formData.work_order_number
+                    ? (() => {
+                      const selectedOrder = workOrders.find(
+                        (o) => o.work_order_number === formData.work_order_number
+                      );
+                      return selectedOrder
+                        ? `${selectedOrder.work_order_number} - ${selectedOrder.title}`
+                        : "-";
+                    })()
+                    : "-"}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.pickerContainer}>
 
-                {workOrders.map(order => (
-                  <Picker.Item
-                    key={order.id}
-                    label={`${order.work_order_number} - ${order.title}`}
-                    value={order.id}   // or order.work_order_number — depends on your need
-                  />
-                ))}
-              </Picker>
-            </View>
+                <Picker
+                  selectedValue={formData.work_order_number}
+                  onValueChange={handleWorkOrderSelect}
+                  style={styles.pickerStyle}
+                  enabled={true}
+                >
+                  <Picker.Item label="Select Work Order" value="" />
+                  {workOrders.map((order) => (
+                    <Picker.Item
+                      key={order.id}
+                      label={`${order.work_order_number} - ${order.title}`}
+                      value={order.work_order_number} // must match selectedValue
+                    />
+                  ))}
+                </Picker>
+
+              </View>
+            )}
           </View>
 
           <View style={styles.col}>
             <Text style={styles.label}>Job Assignment ID</Text>
-            <TextInput placeholder="Auto-populated from assignment" value={formData.job_assignment_id} style={styles.input} editable={false} />
+
+            {mode === "view" ? (
+              <View style={styles.readOnlyView}>
+                <Text style={styles.readOnlyText}>
+                  {formData.job_assignment_id || "-"}
+                </Text>
+              </View>
+            ) : (
+              <TextInput
+                placeholder="Auto-populated from assignment"
+                editable={true} // editable in edit/create mode
+                value={formData.job_assignment_id}
+                style={styles.input}
+              />
+            )}
           </View>
+
 
           <View style={styles.row}>
             <View style={styles.col}>
               <Text style={styles.label}>Technician Name</Text>
-              <TextInput placeholder="Auto-populated from assignment" value={formData.technician_name} style={styles.input} editable={false} />
+              {mode === "view" ? (
+                <View style={styles.readOnlyView}>
+                  <Text style={styles.readOnlyText}>
+                    {formData.technician_name || "-"}
+                  </Text>
+                </View>
+              ) : (
+                <TextInput placeholder="Auto-populated from assignment" value={formData.technician_name} style={styles.input} editable={true} />
+              )}
             </View>
             <View style={styles.col}>
               <Text style={styles.label}>Vehicle ID</Text>
-              <TextInput placeholder="Auto-populated from assignment" value={formData.vehicle_id} style={styles.input} editable={false} />
+              {mode === "view" ? (
+                <View style={styles.readOnlyView}>
+                  <Text style={styles.readOnlyText}>
+                    {formData.vehicle_id || "-"}
+                  </Text>
+                </View>
+              ) : (
+                <TextInput placeholder="Auto-populated from assignment" value={formData.vehicle_id} style={styles.input} editable={true} />
+              )}
             </View>
           </View>
         </View>
@@ -707,61 +933,124 @@ const buildFormData = () => {
           <View style={styles.row}>
             <View style={styles.col}>
               <Text style={styles.label}>Site/Location Name</Text>
-              <TextInput placeholder="Auto-populated from assignment" value={formData.site_name} style={styles.input} editable={false} />
+              {mode === "view" ? (
+                <View style={styles.readOnlyView}>
+                  <Text style={styles.readOnlyText}>
+                    {formData.site_name || "-"}
+                  </Text>
+                </View>
+              ) : (
+                <TextInput
+                  placeholder="Auto-populated from assignment"
+                  value={formData.site_name}
+                  style={styles.input}
+                  editable={true}
+                />
+              )}
+
             </View>
             <View style={styles.col}>
               <Text style={styles.label}>GPS Coordinates</Text>
-              <TextInput placeholder="Auto-captured" value={formData.gps_coordinates} style={styles.input} editable={false} />
-            </View>
+              {mode === "view" ? (
+                <View style={styles.readOnlyView}>
+                  <Text style={styles.readOnlyText}>
+                    {formData.gps_coordinates || "-"}
+                  </Text>
+                </View>
+              ) : (
+                <TextInput placeholder="Auto-captured" value={formData.gps_coordinates} style={styles.input} editable={true} />
+
+              )}   </View>
           </View>
 
           <Text style={styles.label}>Site Address</Text>
-          <TextInput
-            placeholder="Auto-populated from assignment"
-            value={formData.site_address}
-            style={[styles.input, { height: 70 }]}
-            editable={false}
-            multiline
-          />
-
+          {mode === "view" ? (
+            <View style={styles.readOnlyView}>
+              <Text style={styles.readOnlyText}>
+                {formData.site_address || "-"}
+              </Text>
+            </View>
+          ) : (
+            <TextInput
+              placeholder="Auto-populated from assignment"
+              value={formData.site_address}
+              style={[styles.input, { height: 70 }]}
+              editable={true}
+              multiline
+            />
+          )}
           <View style={styles.row}>
             <View style={styles.col}>
               <Text style={styles.label}>Starting Odometer *</Text>
-              <TextInput
-                placeholder="e.g., 45000"
-                style={styles.input}
-                keyboardType="numeric"
-                value={startOdo}
-                onChangeText={setStartOdo}
-              />
+              {mode === "view" ? (
+                <View style={styles.readOnlyView}>
+                  <Text style={styles.readOnlyText}>
+                    {startOdo || "-"}
+                  </Text>
+                </View>
+              ) : (
+                <TextInput
+                  placeholder="e.g., 45000"
+                  style={styles.input}
+                  keyboardType="numeric"
+                  value={startOdo}
+                  onChangeText={setStartOdo}
+                  editable={true}
+                />
+              )}
             </View>
 
             <View style={styles.col}>
               <Text style={styles.label}>Ending Odometer *</Text>
-              <TextInput
-                placeholder="e.g., 45025"
-                style={styles.input}
-                keyboardType="numeric"
-                value={endOdo}
-                onChangeText={setEndOdo}
-              />
+              {mode === "view" ? (
+                <View style={styles.readOnlyView}>
+                  <Text style={styles.readOnlyText}>
+                    {endOdo || "-"}
+                  </Text>
+                </View>
+              ) : (
+                <TextInput
+                  placeholder="e.g., 45025"
+                  style={styles.input}
+                  keyboardType="numeric"
+                  value={endOdo}
+                  onChangeText={setEndOdo}
+                  editable={true}
+                />
+              )}
             </View>
           </View>
 
           <View style={styles.row}>
             <View style={styles.col}>
               <Text style={styles.label}>Total Mileage</Text>
-              <TextInput
-                placeholder="Auto-calculated"
-                style={styles.input}
-                value={totalMileage}
-                editable={false}
-              />
+              {mode === "view" ? (
+                <View style={styles.readOnlyView}>
+                  <Text style={styles.readOnlyText}>
+                    {totalMileage || "-"}
+                  </Text>
+                </View>
+              ) : (
+                <TextInput
+                  placeholder="Auto-calculated"
+                  style={styles.input}
+                  value={totalMileage}
+                  editable={true}
+                />
+              )}
             </View>
             <View style={styles.col}>
               <Text style={styles.label}>Travel Time</Text>
-              <TextInput placeholder="Auto-calculated" value={duration} style={styles.input} editable={false} />
-            </View>
+              {mode === "view" ? (
+                <View style={styles.readOnlyView}>
+                  <Text style={styles.readOnlyText}>
+                    {duration || "-"}
+                  </Text>
+                </View>
+              ) : (
+                <TextInput placeholder="Auto-calculated" value={duration} style={styles.input} editable={true} />
+
+              )}   </View>
           </View>
         </View>
 
@@ -771,53 +1060,93 @@ const buildFormData = () => {
           <Text style={styles.sectionTitle}>🛠️ Work Performed Details</Text>
 
           <Text style={styles.label}>Actual Work Description *</Text>
-          <TextInput
-            placeholder="Describe what was actually completed..."
-            style={[styles.input, { height: 80 }]}
-            multiline
-            value={workDescription}
-            onChangeText={setWorkDescription}
-          />
+          {mode === "view" ? (
+            <View style={styles.readOnlyView}>
+              <Text style={styles.readOnlyText}>
+                {workDescription || "-"}
+              </Text>
+            </View>
+          ) : (
+            <TextInput
+              placeholder="Describe what was actually completed..."
+              style={[styles.input, { height: 80 }]}
+              multiline
+              value={workDescription}
+              onChangeText={setWorkDescription}
+              editable={true}
+            />
 
-
+          )}
           <View style={styles.row}>
             <View style={styles.col}>
               <Text style={styles.label}>Equipment Condition *</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={selectedEquipmentCondition}
-                  onValueChange={(value) => setSelectedEquipmentCondition(value)}
-                  style={styles.pickerStyle}
-                >
-                  <Picker.Item label="Select equipment condition" value="" />
-                  {equipmentConditions.map((item) => (
-                    <Picker.Item key={item.id} label={item.name} value={item.name} />
-                  ))}
-                </Picker>
-              </View>
+
+              {mode === "view" ? (
+                <View style={styles.readOnlyView}>
+                  <Text style={styles.readOnlyText}>
+                    {selectedEquipmentCondition
+                      ? equipmentConditions.find(
+                        (item) => item.id.toString() === selectedEquipmentCondition
+                      )?.name
+                      : "-"}
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={selectedEquipmentCondition}
+                    onValueChange={(value) => setSelectedEquipmentCondition(value)}
+                    style={styles.pickerStyle}
+                    enabled={true}
+                  >
+                    <Picker.Item label="Select equipment condition" value="" />
+                    {equipmentConditions.map((item) => (
+                      <Picker.Item key={item.id} label={item.name} value={item.id} />
+                    ))}
+                  </Picker>
+                </View>
+              )}
+
             </View>
+
 
             <View style={styles.col}>
               <Text style={styles.label}>Time on Site</Text>
-              <TextInput
-                placeholder="e.g., 2h 30m"
-                style={styles.input}
-                value={timeOnSite}
-                onChangeText={setTimeOnSite}
-              />
-
+              {mode === "view" ? (
+                <View style={styles.readOnlyView}>
+                  <Text style={styles.readOnlyText}>
+                    {timeOnSite || "-"}
+                  </Text>
+                </View>
+              ) : (
+                <TextInput
+                  placeholder="e.g., 2h 30m"
+                  style={styles.input}
+                  value={timeOnSite}
+                  onChangeText={setTimeOnSite}
+                  editable={true}
+                />
+              )}
             </View>
           </View>
 
           <Text style={styles.label}>Parts/Materials Used</Text>
-          <TextInput
-            placeholder="List all parts and materials..."
-            style={[styles.input, { height: 80 }]}
-            multiline
-            value={partsUsed}
-            onChangeText={setPartsUsed}
-          />
-
+          {mode === "view" ? (
+            <View style={styles.readOnlyView}>
+              <Text style={styles.readOnlyText}>
+                {partsUsed || "-"}
+              </Text>
+            </View>
+          ) : (
+            <TextInput
+              placeholder="List all parts and materials..."
+              style={[styles.input, { height: 80 }]}
+              multiline
+              value={partsUsed}
+              onChangeText={setPartsUsed}
+              editable={true}
+            />
+          )}
         </View>
 
         {/* Issues & Observations */}
@@ -825,48 +1154,88 @@ const buildFormData = () => {
           <Text style={styles.sectionTitle}>⚠ Issues & Observations</Text>
 
           <Text style={styles.label}>Root Cause Identified *</Text>
-          <TextInput
-            style={styles.textarea}
-            placeholder="What caused the problem..."
-            multiline
-            value={rootCause}
-            onChangeText={setRootCause}
-          />
-
+          {mode === "view" ? (
+            <View style={styles.readOnlyView}>
+              <Text style={styles.readOnlyText}>
+                {rootCause || "-"}
+              </Text>
+            </View>
+          ) : (
+            <TextInput
+              style={styles.textarea}
+              placeholder="What caused the problem..."
+              multiline
+              value={rootCause}
+              onChangeText={setRootCause}
+              editable={true}
+            />
+          )}
 
           <Text style={styles.label}>Resolution / Action Taken *</Text>
-          <TextInput
-            style={styles.textarea}
-            placeholder="How the issue was resolved..."
-            multiline
-            value={resolutionTaken}
-            onChangeText={setResolutionTaken}
-          />
-
+          {mode === "view" ? (
+            <View style={styles.readOnlyView}>
+              <Text style={styles.readOnlyText}>
+                {resolutionTaken || "-"}
+              </Text>
+            </View>
+          ) : (
+            <TextInput
+              style={styles.textarea}
+              placeholder="How the issue was resolved..."
+              multiline
+              value={resolutionTaken}
+              onChangeText={setResolutionTaken}
+              editable={true}
+            />
+          )}
 
           <Text style={styles.label}>Technician Notes / Comments</Text>
-          <TextInput
-            style={styles.textarea}
-            placeholder="Additional observations..."
-            multiline
-            value={technicianNotes}
-            onChangeText={setTechnicianNotes}
-          />
+          {mode === "view" ? (
+            <View style={styles.readOnlyView}>
+              <Text style={styles.readOnlyText}>
+                {technicianNotes || "-"}
+              </Text>
+            </View>
+          ) : (
+            <TextInput
+              style={styles.textarea}
+              placeholder="Additional observations..."
+              multiline
+              value={technicianNotes}
+              onChangeText={setTechnicianNotes}
+              editable={true}
+            />
+          )}
 
 
-          <Text style={styles.label}>Job Status *</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={selectedTripStatus}
-              onValueChange={(value) => setSelectedTripStatus(value)}
-              style={styles.pickerStyle}
-            >
-              <Picker.Item label="Select job status" value="" />
-              {tripStatuses.map((item) => (
-                <Picker.Item key={item.id} label={item.name} value={item.name} />
-              ))}
-            </Picker>
-          </View>
+
+
+          <Text style={styles.label}>Trip Status *</Text>
+
+          {mode === "view" ? (
+            <View style={styles.readOnlyView}>
+              <Text style={styles.readOnlyText}>
+                {selectedTripStatus
+                  ? tripStatuses.find((item) => item.id.toString() === selectedTripStatus)?.name
+                  : "-"}
+
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={selectedTripStatus}
+                onValueChange={(value) => setSelectedTripStatus(value)}
+                style={styles.pickerStyle}
+                enabled={true}
+              >
+                <Picker.Item label="Select job status" value="" />
+                {tripStatuses.map((item) => (
+                  <Picker.Item key={item.id} label={item.name} value={item.id} />
+                ))}
+              </Picker>
+            </View>
+          )}
 
         </View>
 
@@ -877,17 +1246,17 @@ const buildFormData = () => {
           {/* BEFORE PHOTO */}
           <View style={styles.block}>
             <Text style={styles.blockTitle}>Before Photo</Text>
+            {mode !== "view" && (
+              <View style={styles.row}>
+                <TouchableOpacity style={styles.smallBtn} onPress={openCameraBefore}>
+                  <Text style={styles.smallBtnText}>📷 Camera</Text>
+                </TouchableOpacity>
 
-            <View style={styles.row}>
-              <TouchableOpacity style={styles.smallBtn} onPress={openCameraBefore}>
-                <Text style={styles.smallBtnText}>📷 Camera</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.smallBtn} onPress={openGalleryBefore}>
-                <Text style={styles.smallBtnText}>🖼 Gallery</Text>
-              </TouchableOpacity>
-            </View>
-
+                <TouchableOpacity style={styles.smallBtn} onPress={openGalleryBefore}>
+                  <Text style={styles.smallBtnText}>🖼 Gallery</Text>
+                </TouchableOpacity>
+              </View>
+            )}
             {beforeImage && (
               <Image
                 source={{ uri: beforeImage }}
@@ -899,17 +1268,17 @@ const buildFormData = () => {
           {/* AFTER PHOTO */}
           <View style={styles.block}>
             <Text style={styles.blockTitle}>After Photo</Text>
+            {mode !== "view" && (
+              <View style={styles.row}>
+                <TouchableOpacity style={styles.smallBtn} onPress={openCameraAfter}>
+                  <Text style={styles.smallBtnText}>📷 Camera</Text>
+                </TouchableOpacity>
 
-            <View style={styles.row}>
-              <TouchableOpacity style={styles.smallBtn} onPress={openCameraAfter}>
-                <Text style={styles.smallBtnText}>📷 Camera</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.smallBtn} onPress={openGalleryAfter}>
-                <Text style={styles.smallBtnText}>🖼 Gallery</Text>
-              </TouchableOpacity>
-            </View>
-
+                <TouchableOpacity style={styles.smallBtn} onPress={openGalleryAfter}>
+                  <Text style={styles.smallBtnText}>🖼 Gallery</Text>
+                </TouchableOpacity>
+              </View>
+            )}
             {afterImage && (
               <Image
                 source={{ uri: afterImage }}
@@ -919,23 +1288,36 @@ const buildFormData = () => {
           </View>
 
 
+
           {/* DOCUMENTATION */}
           <View style={styles.block}>
-            <Text style={styles.blockTitle}>📄 Additional Attachments </Text>
+            <Text style={styles.blockTitle}>📄 Additional Attachments</Text>
 
-            <TouchableOpacity style={styles.docBtn} onPress={openDocument}>
-              <Text style={styles.docBtnText}>📄 Upload Document</Text>
-            </TouchableOpacity>
+            {/* Upload button only in edit/create mode */}
+            {mode !== "view" && (
+              <TouchableOpacity style={styles.docBtn} onPress={openDocument}>
+                <Text style={styles.docBtnText}>📄 Upload Document</Text>
+              </TouchableOpacity>
+            )}
 
+            {/* Show file name and download button */}
             {documentFile && (
-              <Text style={{ marginTop: 6, color: "green", fontWeight: "600" }}>
-                Selected: {documentFile.name}
-              </Text>
+              <View style={{ marginTop: 6, flexDirection: "row", alignItems: "center" }}>
+                <Text
+                  style={{ color: "green", fontWeight: "600", flex: 1 }}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  Selected: {documentFile.name || documentFile.fileName || "Attachment"}
+                </Text>
+
+
+
+              </View>
             )}
           </View>
 
         </View>
-
 
 
         {/* BUTTONS */}
@@ -1127,7 +1509,23 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
 
+  readOnlyInput: {
 
+    paddingHorizontal: 12,
+    paddingVertical: 14,
+    fontSize: 12,
+    color: "#101318CC",
+
+  },
+  readOnlyView: {
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+
+  },
+  readOnlyText: {
+    fontSize: 12,
+    color: "#101318CC",
+  },
   subSection: {
     marginTop: 15,
     marginBottom: 5,
