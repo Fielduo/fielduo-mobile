@@ -81,13 +81,13 @@ const handleLogin = async () => {
         </Text>
 
         {/* ===== Illustration ===== */}
-        <View style={styles.imageContainer}>
+        {/* <View style={styles.imageContainer}>
           <Image
             source={require("../../assets/images/login.png")}
             style={styles.illustration}
             resizeMode="contain"
           />
-        </View>
+        </View> */}
 
         <Text style={styles.welcomeText}>Welcome Back</Text>
 

@@ -50,49 +50,53 @@ const menuSections: {
   title: string;
   items: { name: string; icon: MenuIconName; route: string }[];
 }[] = [
-  {
-    title: "REPORT AND ANALYSIS",
-    items: [
-      { name: "Dashboard", icon: "view-dashboard-outline", route: "DashboardScreen" },
-      { name: "Field Management", icon: "map-marker-outline", route: "FieldManagement" },
-      { name: "IOT", icon: "chip", route: "IOT" },
-    ],
-  },
-  {
-    title: "CRM",
-    items: [
-      { name: "Account", icon: "account-outline", route: "Account" },
-      { name: "Contact", icon: "account-multiple-outline", route: "Contact" },
-      { name: "Leads", icon: "lightbulb-outline", route: "Leads" },
-      { name: "Opportunities", icon: "chart-line", route: "Opportunities" },
-    ],
-  },
-  {
-    title: "FSM",
-    items: [
-      { name: "Technicians", icon: "account-plus-outline", route: "WorkForce" },
-      { name: "Assets", icon: "cube-outline", route: "Assets" },
-      { name: "New Service Contract", icon: "file-document-edit-outline", route: "ServiceContract" },
-      { name: "Work Order", icon: "clipboard-list-outline", route: "Workorder" },
-      { name: "Inventory", icon: "package-variant-closed", route: "Inventory" },
-      { name: "Job Schedule", icon: "calendar-clock", route: "Schedule" },
-      { name: "Job Assign", icon: "map-marker-distance", route: "FieldWorkerTrip" },
-      { name: "Vehicle", icon: "car-outline", route: "Vehicles" },
-      { name: "Work Complete Status", icon: "clipboard-check-outline", route: "WorkCompletion" },
-      { name: "Service Report", icon: "file-document-outline", route: "ServiceReport" },
-      { name: "Trips Logs", icon: "file-chart-outline", route: "TripLog" },
-    ],
-  },
-  {
-    title: "BILLING",
-    items: [
-      { name: "Quotes", icon: "file-cabinet", route: "Quotes" },
-      { name: "Invoice", icon: "file-document", route: "Invoices" },
-      { name: "Customer Feedback", icon: "comment-text-outline", route: "CustomerFeedback" },
-      { name: "Payment", icon: "credit-card-outline", route: "Payments" },
-    ],
-  },
-];
+    {
+      title: "DASHBOARD",
+      items: [
+        { name: "Dashboard", icon: "view-dashboard-outline", route: "DashboardScreen" },
+        // { name: "Field Management", icon: "map-marker-outline", route: "FieldManagement" },
+        // { name: "IOT", icon: "chip", route: "IOT" },
+      ],
+    },
+    // {
+    //   title: "CRM",
+    //   items: [
+    //     { name: "Account", icon: "account-outline", route: "Account" },
+    //     { name: "Contact", icon: "account-multiple-outline", route: "Contact" },
+    //     // { name: "Leads", icon: "lightbulb-outline", route: "Leads" },
+    //     // { name: "Opportunities", icon: "chart-line", route: "Opportunities" },
+    //   ],
+    // },
+    {
+      title: "FSM",
+      items: [
+        { name: "Account", icon: "account-outline", route: "Account" },
+        { name: "Contact", icon: "account-multiple-outline", route: "Contact" },
+        { name: "Technicians", icon: "account-plus-outline", route: "WorkForce" },
+        { name: "Assets", icon: "cube-outline", route: "Assets" },
+        { name: "Inventory", icon: "package-variant-closed", route: "Inventory" },
+        { name: "Fleet", icon: "car-outline", route: "Vehicles" },
+        { name: "New Service Contract", icon: "file-document-edit-outline", route: "ServiceContract" },
+        { name: "Work Order", icon: "clipboard-list-outline", route: "Workorder" },
+
+        { name: "Job Schedule", icon: "calendar-clock", route: "Schedule" },
+        { name: "Job Assignment", icon: "map-marker-distance", route: "FieldWorkerTrip" },
+
+        { name: "Work Complete Status", icon: "clipboard-check-outline", route: "WorkCompletion" },
+        { name: "Service Report", icon: "file-document-outline", route: "ServiceReport" },
+        { name: "Trips Logs", icon: "file-chart-outline", route: "TripLog" },
+      ],
+    },
+    {
+      title: "BILLING",
+      items: [
+        { name: "Quotes", icon: "file-cabinet", route: "Quotes" },
+        { name: "Invoice", icon: "file-document", route: "Invoices" },
+        { name: "Customer Feedback", icon: "comment-text-outline", route: "CustomerFeedback" },
+        { name: "Payment", icon: "credit-card-outline", route: "Payments" },
+      ],
+    },
+  ];
 
 export default function SearchMenu() {
   const navigation = useNavigation<SearchMenuNavigationProp>();
@@ -167,7 +171,7 @@ export default function SearchMenu() {
           ))}
 
           <View style={styles.footer}>
-            <TouchableOpacity style={styles.menuItem}>
+            {/* <TouchableOpacity style={styles.menuItem}>
               <MaterialCommunityIcons
                 name="cog-outline"
                 size={22}
@@ -175,7 +179,7 @@ export default function SearchMenu() {
                 style={styles.menuIcon}
               />
               <Text style={styles.menuText}>Settings</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
             <View style={styles.userSection}>
               <View style={styles.userAvatar}>

@@ -1,9 +1,20 @@
-import React from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity } from "react-native";
+import Mapbox from "@rnmapbox/maps";
+import { api } from "@/src/api/cilent";
 
+
+// Import location functions from expo-location
+import { 
+  requestForegroundPermissionsAsync,
+  getCurrentPositionAsync,
+  Accuracy 
+} from 'expo-location';
+import Constants from "expo-constants";
 import Header from "../common/Header";
 import HeaderSection from "../common/HeaderSection";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import LocationTracker from "@/store/LocationTracker";
 
 type ActionIconName = 
   | "file-plus"
@@ -15,9 +26,109 @@ type ActionIconName =
   | "account-group"
   | "calendar-check"
   | "trending-up";
+const mapboxToken = Constants.expoConfig?.extra?.MAPBOX_ACCESS_TOKEN;
 
+if (!mapboxToken) {
+  throw new Error("MAPBOX_ACCESS_TOKEN is missing");
+}
+
+Mapbox.setAccessToken(mapboxToken);
+// -------------------- Type Definitions --------------------
+type TechnicianLocation = {
+  id: number;
+  technician_id: number;
+  organization_id: number;
+  tracking_date: string;
+  current_location: {
+    latitude: number;
+    longitude: number;
+    speed: number;
+    accuracy: number;
+    timestamp: string;
+    status: string;
+  };
+  location_history: {
+    latitude: number;
+    longitude: number;
+    speed: number;
+    accuracy: number;
+    timestamp: string;
+    status: string;
+  }[];
+  status: string;
+  updated_at: string;
+};
+
+type TechnicianLocationResponse = {
+  success: boolean;
+  technician_locations: TechnicianLocation[];
+};
+
+// -------------------- Component --------------------
 export default function DashboardScreen() {
- const cards: {
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [technicians, setTechnicians] = useState<TechnicianLocation[]>([]);
+  const cameraRef = useRef<any>(null);
+
+  // const DEFAULT_COORDS = { latitude: 12.9716, longitude: 77.5946 }; // fallback
+
+  // Fetch technician locations from API
+  const fetchTechnicians = async () => {
+    try {
+      const res = await api.get<TechnicianLocationResponse>("/technician-locations");
+      if (res.success) setTechnicians(res.technician_locations);
+    } catch (err) {
+      console.log("Fetching technicians failed:", err);
+    }
+  };
+
+  // Move camera on map
+  const moveCamera = (coords: { latitude: number; longitude: number }) => {
+    cameraRef.current?.setCamera({
+      centerCoordinate: [coords.longitude, coords.latitude],
+      zoomLevel: 14,
+      animationDuration: 1000,
+    });
+  };
+
+  useEffect(() => {
+    const initLocation = async () => {
+      try {
+        const { status } = await requestForegroundPermissionsAsync();
+        if (status !== "granted") {
+          console.log("Location permission denied");
+          return;
+        }
+
+        const loc = await getCurrentPositionAsync({ accuracy: Accuracy.Highest });
+        const coords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+        setUserLocation(coords);
+        moveCamera(coords);
+
+        // Start tracking location updates
+        LocationTracker.onLocationUpdate = (loc) => {
+          const newCoords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+          setUserLocation(newCoords);
+          moveCamera(newCoords);
+        };
+        LocationTracker.start();
+      } catch (err) {
+        console.log("Failed to get initial location:", err);
+      }
+    };
+
+    initLocation();
+
+    fetchTechnicians();
+    const interval = setInterval(fetchTechnicians, 15000);
+
+    return () => {
+      LocationTracker.stop();
+      clearInterval(interval);
+    };
+  }, []);
+
+   const cards: {
   title: string;
   icon: CardIconName;
   color: string;
@@ -43,10 +154,10 @@ export default function DashboardScreen() {
     { title: "Worker John assigned to Field #42", sub: "South District · 1 hour ago", color: "#1E88E5", bg: "#E3F2FD", status: "Active" },
     { title: "Quality inspection passed", sub: "East Region · 2 hours ago", color: "#009587", bg: "#E8F5E9", status: "Completed" },
   ];
-
   return (
-    <View style={{ flex: 1, backgroundColor: "#FFF" }}>
-      <Header />
+    <View style={{ flex: 1 }}>
+      <ScrollView style={styles.container}>
+         <Header />
       <HeaderSection
         title="What services do you need?"
         buttonText="+ New Field"
@@ -54,10 +165,7 @@ export default function DashboardScreen() {
         onSearchChange={(text) => console.log("Searching:", text)}
         currentScreen="DashboardScreen"   // ✅ add this
       />
-      <ScrollView style={styles.container}>
-        <Text style={styles.sectionTitle}>Dashboard</Text>
-        {/* Cards */}
-        <View style={styles.cardContainer}>
+       <View style={styles.cardContainer}>
           {cards.map((c, i) => (
             <View key={i} style={styles.card}>
               <View style={styles.cardHeader}>
@@ -70,8 +178,32 @@ export default function DashboardScreen() {
           ))}
         </View>
 
-        {/* Quick Actions */}
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <Text style={styles.sectionTitle}>Live Technician Map</Text>
+        <View style={styles.mapContainer}>
+          <Mapbox.MapView style={styles.map}>
+            {userLocation && (
+              <Mapbox.Camera
+                ref={cameraRef}
+                centerCoordinate={[userLocation.longitude, userLocation.latitude]}
+                zoomLevel={14}
+              />
+            )}
+            <Mapbox.UserLocation visible showsUserHeadingIndicator />
+            {technicians.map((t) => (
+             <Mapbox.PointAnnotation
+  key={t.id.toString()}
+  id={`tech-${t.id}`}
+  coordinate={[t.current_location.longitude, t.current_location.latitude]}
+>
+
+                <View style={styles.marker}>
+                  <Text style={styles.markerText}>🧑‍🔧</Text>
+                </View>
+              </Mapbox.PointAnnotation>
+            ))}
+          </Mapbox.MapView>
+        </View>
+      <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.quickActions}>
           {actions.map((a, i) => (
             <TouchableOpacity key={i} style={styles.actionItem}>
@@ -234,5 +366,26 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "600",
   },
-});
 
+
+  mapContainer: {
+    width: Dimensions.get("window").width - 32,
+    height: 400,
+    borderRadius: 12,
+    overflow: "hidden",
+    marginBottom: 20,
+  },
+  map: { flex: 1 },
+
+  marker: {
+    width: 34,
+    height: 34,
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#007AFF",
+  },
+  markerText: { fontSize: 18 },
+});
