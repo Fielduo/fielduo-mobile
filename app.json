@@ -50,9 +50,11 @@
       "reactCompiler": true
     },
     "extra": {
-      "eas": {
-        "projectId": "ea59ec94-2301-4ca0-8f44-67ed5a2fff4a"
-      }
-    }
+  "MAPBOX_ACCESS_TOKEN": "pk.eyJ1Ijoia2lydXRoaWdhbmUiLCJhIjoiY21oYXJyeXdqMWozZjJsczV5dDlycnd5NyJ9.Bk5zF4AQxBeWBJjHux3UHQ",
+  "eas": {
+    "projectId": "ea59ec94-2301-4ca0-8f44-67ed5a2fff4a"
+  }
+}
+
   }
 }

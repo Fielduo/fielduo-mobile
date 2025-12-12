@@ -12,12 +12,15 @@ import {
   Linking,
 } from "react-native";
 import Mapbox, { MapView, PointAnnotation, ShapeSource, LineLayer } from "@rnmapbox/maps";
-import Geolocation from "react-native-geolocation-service";
+import * as Location from "expo-location";
+
 import polyline from "@mapbox/polyline";
 import { api } from "@/src/api/cilent";
 import { Ionicons } from "@expo/vector-icons";
-import { requestLocationPermission } from "@/store/useLocationPermission";
+
 import Constants from 'expo-constants';
+import { requestLocationPermission } from "@/store/useLocationPermission";
+import { LocationSubscription } from "expo-location";
 
 const mapboxToken = Constants.expoConfig?.extra?.MAPBOX_ACCESS_TOKEN;
 
@@ -112,7 +115,7 @@ const MapRoute: React.FC<Props> = ({
   const [routeCoords, setRouteCoords] = useState<number[][]>([]);
   const routeSnapRef = useRef<number[][]>([]);
   const [tracking, setTracking] = useState(false);
-  const watchIdRef = useRef<number | null>(null);
+const watchIdRef = useRef<LocationSubscription | null>(null);
   const [optimizing, setOptimizing] = useState(false);
   const pulseAnim = useRef(new Animated.Value(0)).current; // for user dot pulse
   const [hasOptimizedRoute, setHasOptimizedRoute] = useState(false);
@@ -128,27 +131,37 @@ const MapRoute: React.FC<Props> = ({
   const [zoomLevel, setZoomLevel] = useState(13);
 
   // -------- User location init --------
-  useEffect(() => {
-    const init = async () => {
-      const allowed = await requestLocationPermission();
-      if (!allowed) return Alert.alert("Error", "Location permission denied");
+useEffect(() => {
+  const init = async () => {
+    const allowed = await requestLocationPermission();
+    if (!allowed) {
+      Alert.alert("Error", "Location permission denied");
+      return;
+    }
 
-      Geolocation.getCurrentPosition(
-        (pos: Geolocation.GeoPosition) => {
-          const initial: [number, number] = [pos.coords.longitude, pos.coords.latitude];
-          setUserLocation(initial);
-          setCarCoord(initial);
-          prevCarRef.current = initial;
-        },
-        (error: Geolocation.GeoError) => Alert.alert("Error", "Unable to fetch location"),
-        { enableHighAccuracy: true }
-      );
+    try {
+      const pos = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Highest,
+      });
 
-    };
-    init();
-    return stopLiveTracking;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+      const initial: [number, number] = [
+        pos.coords.longitude,
+        pos.coords.latitude,
+      ];
+
+      setUserLocation(initial);
+      setCarCoord(initial);
+      prevCarRef.current = initial;
+    } catch (error) {
+      Alert.alert("Error", "Unable to fetch location");
+    }
+  };
+
+  init();
+  return stopLiveTracking;
+}, []);
+
+
 
   // -------- Animate Pulse for user dot (unchanged) --------
   useEffect(() => {
@@ -193,113 +206,114 @@ const MapRoute: React.FC<Props> = ({
   }, [userLocation, jobs]);
 
   // -------- Optimize Route --------
-  const handleOptimizeRoute = async () => {
-    try {
-      setOptimizing(true);
+const handleOptimizeRoute = async () => {
+  try {
+    setOptimizing(true);
 
-      // 🛑 Stop live GPS tracking if active
-      if (tracking) {
-        stopLiveTracking();
-      }
-
-      // Delay so GPS frees up
-      await new Promise((res) => setTimeout(res, 500));
-
-      Geolocation.getCurrentPosition(
-        async (pos: Geolocation.GeoPosition) => {
-          const stableStart: { latitude: number; longitude: number } = {
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
-          };
-
-          const res = await api.post<OptimizeRouteResponse>("/job_schedules/optimize-route", {
-            assigned_to: assignedUserId,
-            date: selectedDate,
-            start_location: stableStart,
-          });
-
-          if (!res.route?.geometry) {
-            Alert.alert("Error", "Invalid route returned");
-            return;
-          }
-
-          const coords: number[][] = polyline.decode(res.route.geometry)
-            .map(([lat, lng]: [number, number]) => [lng, lat]);
-
-          setRouteCoords(coords);
-          setHasOptimizedRoute(true);
-
-          // ✔ Optional: Restart live tracking after optimizing
-          setTimeout(() => startLiveTracking(), 800);
-        },
-        (error: Geolocation.GeoError) => {
-          console.log("GPS error:", error);
-          Alert.alert("Error", "Unable to fetch accurate location");
-        },
-        { enableHighAccuracy: true, timeout: 8000 }
-      );
-    } catch (error) {
-      console.error(error);
-      Alert.alert("Error", "Route optimization failed");
-    } finally {
-      setOptimizing(false);
+    // Stop live tracking if active
+    if (tracking) {
+      stopLiveTracking();
     }
-  };
+
+    // Small delay so GPS updates settle
+    await new Promise((res) => setTimeout(res, 500));
+
+    // ✅ Get current location using Expo Location (no Geolocation)
+    const pos = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.Highest,
+    });
+
+    const stableStart = {
+      latitude: pos.coords.latitude,
+      longitude: pos.coords.longitude,
+    };
+
+    // API call for optimized route
+    const res = await api.post<OptimizeRouteResponse>(
+      "/job_schedules/optimize-route",
+      {
+        assigned_to: assignedUserId,
+        date: selectedDate,
+        start_location: stableStart,
+      }
+    );
+
+    if (!res.route?.geometry) {
+      Alert.alert("Error", "Invalid route returned");
+      return;
+    }
+
+    // Decode polyline → lng/lat array
+    const coords: number[][] = polyline
+      .decode(res.route.geometry)
+      .map(([lat, lng]: [number, number]) => [lng, lat]);
+
+    setRouteCoords(coords);
+    setHasOptimizedRoute(true);
+
+    // Restart live tracking after route is loaded
+    setTimeout(() => startLiveTracking(), 800);
+  } catch (error) {
+    console.error(error);
+    Alert.alert("Error", "Route optimization failed");
+  } finally {
+    setOptimizing(false);
+  }
+};
+
 
   // -------- Live tracking --------
-  const startLiveTracking = () => {
-    if (tracking) return;
-    setTracking(true);
+const startLiveTracking = async () => {
+  if (tracking) return;
+  setTracking(true);
 
+  if (userLocation) {
+    setCarCoord(userLocation);
+    prevCarRef.current = userLocation;
+  }
 
+  startCarPulse();
 
-    // Ensure car starts at the latest known user location
-    if (userLocation) {
-      setCarCoord(userLocation);
-      prevCarRef.current = userLocation;
+  watchIdRef.current = await Location.watchPositionAsync(
+    {
+      accuracy: Location.Accuracy.Highest,
+      timeInterval: 2500,
+      distanceInterval: 5,
+    },
+    (pos) => {
+      const newLoc: [number, number] = [
+        pos.coords.longitude,
+        pos.coords.latitude,
+      ];
+
+      if (prevCarRef.current) {
+        const bearing = getBearing(prevCarRef.current, newLoc);
+        setCarRotation(bearing);
+      }
+
+      prevCarRef.current = newLoc;
+      setCarCoord(newLoc);
+      setUserLocation(newLoc);
+
+      cameraRef.current?.setCamera({
+        centerCoordinate: newLoc,
+        zoomLevel,
+        animationDuration: 500,
+      });
     }
+  );
+};
 
-    startCarPulse();
 
-    watchIdRef.current = Geolocation.watchPosition(
-      (pos: Geolocation.GeoPosition): void => {
-        const lng: number = pos.coords.longitude;
-        const lat: number = pos.coords.latitude;
-        const newLoc: [number, number] = [lng, lat];
+const stopLiveTracking = () => {
+  if (watchIdRef.current) {
+    watchIdRef.current.remove(); // expo-location watcher
+  }
+  watchIdRef.current = null;
+  setTracking(false);
+  stopCarPulse();
+};
 
-        // rotation: compute bearing from previous car position to new location
-        if (prevCarRef.current) {
-          const bearing: number = getBearing(prevCarRef.current, newLoc);
-          setCarRotation(bearing);
-        }
-
-        // update prev ref and state (Mapbox will animate marker position visually)
-        prevCarRef.current = newLoc;
-        setCarCoord(newLoc);
-        setUserLocation(newLoc);
-
-        // center camera (optional)
-        cameraRef.current?.setCamera({
-          centerCoordinate: newLoc,
-          zoomLevel,
-          animationDuration: 500,
-        });
-      },
-      (err: Geolocation.GeoError): void => {
-        console.log("GPS tracking error", err);
-        Alert.alert("Error", "GPS tracking error");
-      },
-      WATCH_OPTIONS
-    );
-  };
-
-  const stopLiveTracking = () => {
-    if (watchIdRef.current !== null) Geolocation.clearWatch(watchIdRef.current);
-    watchIdRef.current = null;
-    setTracking(false);
-
-    stopCarPulse();
-  };
 
   const openInGoogleMaps = () => {
     if (!userLocation) {

@@ -1,22 +1,18 @@
-import { PermissionsAndroid, Platform } from "react-native";
-import Geolocation from "react-native-geolocation-service";
+import * as Location from "expo-location";
 
 export const requestLocationPermission = async () => {
-  if (Platform.OS === "ios") {
-    return await Geolocation.requestAuthorization("always");
+  // Request foreground location
+  const { status } = await Location.requestForegroundPermissionsAsync();
+  if (status !== "granted") {
+    console.warn("Foreground location permission denied");
+    return false;
   }
 
-  if (Platform.OS === "android") {
-    const granted = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-      {
-        title: "Location Permission",
-        message: "This app needs access to your location.",
-        buttonNeutral: "Ask Me Later",
-        buttonNegative: "Cancel",
-        buttonPositive: "OK",
-      }
-    );
-    return granted === PermissionsAndroid.RESULTS.GRANTED;
+  // Request background location (optional)
+  const bg = await Location.requestBackgroundPermissionsAsync();
+  if (bg.status !== "granted") {
+    console.warn("Background location permission denied");
   }
+
+  return true;
 };
