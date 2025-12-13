@@ -10,10 +10,6 @@ const Header = () => {
   return (
     <View style={styles.header}>
       <View style={styles.leftSection}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={20} color="#101318" />
-        </TouchableOpacity>
-
         <Image
           source={require('../../assets/images/Logo.png')}
           style={styles.logo}

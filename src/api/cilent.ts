@@ -6,13 +6,13 @@ class ApiWrapper {
 
   constructor() {
     this.axiosInstance = axios.create({
- baseURL: " https://fielduo.com/v1",   //http://10.0.2.2:5000/v1
+      baseURL: "http://10.0.2.2:5000/v1",   //https://fielduo.com/v1
 
       timeout: 15000,
       headers: { "Content-Type": "application/json" },
     });
 
-    // 🔐 AUTO ADD TOKEN TO REQUESTS
+
     this.axiosInstance.interceptors.request.use(
       async (config: any) => {
         const token = await AsyncStorage.getItem("authToken");
@@ -27,7 +27,7 @@ class ApiWrapper {
       (error) => Promise.reject(error)
     );
 
-    // 🛑 LOG ERRORS
+
     this.axiosInstance.interceptors.response.use(
       (response: AxiosResponse) => response,
       (error) => {
@@ -37,12 +37,12 @@ class ApiWrapper {
     );
   }
 
-  // 📌 Helper to use baseURL in image preview
+
   getBaseUrl() {
     return this.axiosInstance.defaults.baseURL || "";
   }
 
-  // 🔵 STANDARD REQUESTS ===========================
+
   async get<T>(url: string): Promise<T> {
     const res = await this.axiosInstance.get<T>(url);
     return res.data;
@@ -63,7 +63,7 @@ class ApiWrapper {
     return res.data;
   }
 
-  // 🟠 MULTIPART UPLOADS ============================
+
   async postMultipart<T>(url: string, formData: FormData): Promise<T> {
     const res = await this.axiosInstance.post<T>(url, formData, {
       headers: { "Content-Type": "multipart/form-data" },
@@ -78,7 +78,7 @@ class ApiWrapper {
     return res.data;
   }
 
-  // 🔑 TOKEN HELPERS ================================
+
   async setToken(token: string) {
     await AsyncStorage.setItem("authToken", token);
   }

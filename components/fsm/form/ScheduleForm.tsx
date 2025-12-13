@@ -100,7 +100,8 @@ export default function CreateScheduleScreen() {
             setTrips([{ id: tripIdSafe, name: `Trip#${tripIdSafe.slice(0, 8)}` }]);
         } else {
             setTrips([]);
-        };
+        }
+
 
         setStartDate(parseDate(event.start_datetime ?? undefined));
         setEndDate(parseDate(event.end_datetime ?? undefined));

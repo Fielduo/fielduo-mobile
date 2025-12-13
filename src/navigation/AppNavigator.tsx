@@ -10,7 +10,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { api } from '../api/cilent';
 import Layout from '@/components/common/layout';
 
-// Type for your /me response
+
 interface MeResponse {
   success: boolean;
   user?: any;
@@ -24,7 +24,7 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
-  const user = useAuthStore((state) => state.user); // ✅ Read user from store
+  const user = useAuthStore((state) => state.user); 
   const setUser = useAuthStore((state) => state.setUser);
   const [loading, setLoading] = useState(true);
 
@@ -40,12 +40,12 @@ useEffect(() => {
           setUser(res.user);
         }
       } catch (err) {
-        console.log("⚠ Token invalid OR offline. Skipping /me check.");
+        console.log("Token invalid OR offline. Skipping /me check.");
       }
     } else {
       const localUser = useAuthStore.getState().user;
       if (localUser) {
-        console.log("🔄 Using offline stored user");
+        console.log(" Using offline stored user");
       }
     }
 
@@ -55,7 +55,7 @@ useEffect(() => {
   initAuth();
 }, []);
 
-  if (loading) return null; // you can show a splash screen here
+  if (loading) return null; 
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>

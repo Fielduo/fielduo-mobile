@@ -297,3 +297,19 @@ export type SchedulePayload = {
   tax: number;
   discount: string;   // keep as string for input fields
 };
+
+export type  UserProfile = {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  address?: string;
+  state?: string;
+  country?: string;
+  
+  company?: string;
+  role?: string;
+   created_at?: string; // ✅ ADD THIS
+    is_active?: boolean; // ✅ ADD
+}

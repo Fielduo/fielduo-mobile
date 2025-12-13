@@ -1,14 +1,17 @@
+import SearchMenu from '@/components/report-analysis/search-menu';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
 
-const SettingsScreen = () => {
+
+
+const MenuScreen = () => {
   return (
-   
+    
       <View style={styles.container}>
-        <Text style={styles.text}>Settings Screen</Text>
+        <SearchMenu/>
       </View>
-   
+    
   );
 };
 
@@ -17,4 +20,4 @@ const styles = StyleSheet.create({
   text: { fontSize: 20, fontWeight: '600' },
 });
 
-export default SettingsScreen;
+export default MenuScreen;

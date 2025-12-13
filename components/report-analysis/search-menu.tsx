@@ -100,44 +100,10 @@ const menuSections: {
 
 export default function SearchMenu() {
   const navigation = useNavigation<SearchMenuNavigationProp>();
-  const setUser = useAuthStore((state) => state.setUser);
-  const currentUser = useAuthStore((state) => state.user); // ✅ get current user
-
-  const handleLogout = async () => {
-    Alert.alert("Logout", "Are you sure you want to log out?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Logout",
-        onPress: async () => {
-          try {
-            await AsyncStorage.removeItem("authToken");
-            await api.clearToken(); // clear Axios token
-            setUser(null); // reset Zustand user
-
-            navigation.reset({
-              index: 0,
-              routes: [{ name: "Login" as never }],
-            });
-          } catch (error) {
-            console.error("Error logging out:", error);
-            Alert.alert("Error", "Failed to log out. Please try again.");
-          }
-        },
-      },
-    ]);
-  };
 
   return (
     <View style={{ flex: 1, backgroundColor: "#FFF" }}>
       <Header />
-      <HeaderSection
-        title="What services do you need?"
-        buttonText="+ New Field"
-        onButtonClick={() => console.log("New Field Clicked")}
-        onSearchChange={(text) => console.log("Searching:", text)}
-        currentScreen="SearchMenu"
-      />
-
       <SafeAreaView style={styles.safeArea}>
         <ScrollView
           style={styles.container}
@@ -170,42 +136,7 @@ export default function SearchMenu() {
             </View>
           ))}
 
-          <View style={styles.footer}>
-            {/* <TouchableOpacity style={styles.menuItem}>
-              <MaterialCommunityIcons
-                name="cog-outline"
-                size={22}
-                color="#6B6B6B"
-                style={styles.menuIcon}
-              />
-              <Text style={styles.menuText}>Settings</Text>
-            </TouchableOpacity> */}
-
-            <View style={styles.userSection}>
-              <View style={styles.userAvatar}>
-                <Text style={styles.userInitial}>
-                  {currentUser?.first_name?.[0] || "U"}
-                </Text>
-              </View>
-              <View>
-                <Text style={styles.userName}>{currentUser?.first_name || "User"}</Text>
-                <Text style={styles.userEmail}>{currentUser?.email || "email@example.com"}</Text>
-              </View>
-            </View>
-
-            <TouchableOpacity
-              onPress={handleLogout}
-              style={[styles.menuItem, { marginTop: 10 }]}
-            >
-              <MaterialCommunityIcons
-                name="logout"
-                size={22}
-                color="#D32F2F"
-                style={styles.menuIcon}
-              />
-              <Text style={[styles.menuText, { color: "#D32F2F" }]}>Logout</Text>
-            </TouchableOpacity>
-          </View>
+         
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -222,10 +153,5 @@ const styles = StyleSheet.create({
   menuItemPressed: { backgroundColor: "#F1F1F1" },
   menuIcon: { marginRight: 14 },
   menuText: { fontSize: 15, fontWeight: "500", color: "#3A3A3A" },
-  footer: { borderTopWidth: 1, borderTopColor: "#E0E0E0", paddingTop: 16, marginTop: 10 },
-  userSection: { flexDirection: "row", alignItems: "center", marginTop: 12 },
-  userAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#EDE7F6", alignItems: "center", justifyContent: "center", marginRight: 10 },
-  userInitial: { color: "#7E57C2", fontWeight: "700" },
-  userName: { fontSize: 13, fontWeight: "600", color: "#212121" },
-  userEmail: { fontSize: 11, color: "#757575" },
+  
 });

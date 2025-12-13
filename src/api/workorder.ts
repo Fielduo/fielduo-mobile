@@ -6,7 +6,7 @@ export interface SearchResult {
   name: string;
 }
 
-// 🔍 Search Users
+
 export const searchUsers = async (query: string): Promise<SearchResult[]> => {
   if (!query.trim() || query.length < 2) return [];
   try {
@@ -18,7 +18,7 @@ export const searchUsers = async (query: string): Promise<SearchResult[]> => {
   }
 };
 
-// 🔍 Search Customers (Accounts)
+
 export const searchCustomers = async (query: string): Promise<SearchResult[]> => {
   if (!query.trim() || query.length < 2) return [];
   try {
@@ -30,7 +30,7 @@ export const searchCustomers = async (query: string): Promise<SearchResult[]> =>
   }
 };
 
-// 🔍 Search Assets
+
 export const searchAssets = async (query: string): Promise<SearchResult[]> => {
   if (!query.trim() || query.length < 2) return [];
   try {
@@ -42,7 +42,7 @@ export const searchAssets = async (query: string): Promise<SearchResult[]> => {
   }
 };
 
-// 🔍 Search Contacts (already done)
+
 export const searchContacts = async (query: string): Promise<SearchResult[]> => {
   if (!query.trim() || query.length < 2) return [];
   try {

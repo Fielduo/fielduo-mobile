@@ -4,11 +4,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 
-// Screens
+
 import HomeScreen from '../screens/Home/HomeScreen';
 import ProfileScreen from '../screens/Profile/ProfileScreen';
-import SettingsScreen from '../screens/Settings/SettingsScreen';
 import SearchmenuNavigator from './StackNavigator/SearchmenuNavigator';
+import Header from '@/components/common/Header';
+import SearchScreen from '../screens/Search/SearchScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -20,7 +21,7 @@ const BottomTabNavigator = () => {
           headerShown: false,
 
           tabBarIcon: ({ focused, color, size }) => {
-            // default icon — must be valid Ionicons name
+
             let iconName: keyof typeof Ionicons.glyphMap = 'home';
 
             switch (route.name) {
@@ -30,8 +31,8 @@ const BottomTabNavigator = () => {
               case 'Search':
                 iconName = focused ? 'search' : 'search-outline';
                 break;
-              case 'Settings':
-                iconName = focused ? 'settings' : 'settings-outline';
+              case 'Menu':
+                iconName = focused ? 'settings' : 'menu-outline';
                 break;
               case 'Profile':
                 iconName = focused ? 'person' : 'person-outline';
@@ -52,7 +53,7 @@ const BottomTabNavigator = () => {
             height: Platform.OS === 'ios' ? 80 : 60,
             paddingBottom: Platform.OS === 'ios' ? 20 : 10,
             paddingTop: 6,
-            elevation: 20, // shadow for Android
+            elevation: 20,
           },
 
           tabBarLabelStyle: {
@@ -62,8 +63,8 @@ const BottomTabNavigator = () => {
         })}
       >
         <Tab.Screen name="Home" component={HomeScreen} />
-    <Tab.Screen name="Search" component={SearchmenuNavigator} />
-        <Tab.Screen name="Settings" component={SettingsScreen} />
+        <Tab.Screen name="Search" component={SearchScreen} />
+        <Tab.Screen name="Menu" component={SearchmenuNavigator} />
         <Tab.Screen name="Profile" component={ProfileScreen} />
       </Tab.Navigator>
     </SafeAreaView>

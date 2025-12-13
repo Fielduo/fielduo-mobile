@@ -1,20 +1,20 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-
+import { View, StyleSheet } from 'react-native';
+import Profile from '@/components/Profile/Profile';
 
 const ProfileScreen = () => {
   return (
-    
-      <View style={styles.container}>
-        <Text style={styles.text}>My Profile</Text>
-      </View>
-    
+    <View style={styles.container}>
+      <Profile />
+    </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  text: { fontSize: 20, fontWeight: '600' },
-});
-
 export default ProfileScreen;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F6FA', // profile bg match
+  },
+});

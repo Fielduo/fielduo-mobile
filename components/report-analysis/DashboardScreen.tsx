@@ -1,27 +1,27 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Pressable, Modal } from "react-native";
 import Mapbox from "@rnmapbox/maps";
 import { api } from "@/src/api/cilent";
 
 
 // Import location functions from expo-location
-import { 
+import {
   requestForegroundPermissionsAsync,
   getCurrentPositionAsync,
-  Accuracy 
+  Accuracy
 } from 'expo-location';
 import Constants from "expo-constants";
 import Header from "../common/Header";
 import HeaderSection from "../common/HeaderSection";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import LocationTracker from "@/store/LocationTracker";
 
-type ActionIconName = 
+type ActionIconName =
   | "file-plus"
   | "account-plus"
   | "calendar-clock"
   | "file-chart";
-  type CardIconName =
+type CardIconName =
   | "map-marker"
   | "account-group"
   | "calendar-check"
@@ -69,7 +69,9 @@ export default function DashboardScreen() {
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [technicians, setTechnicians] = useState<TechnicianLocation[]>([]);
   const cameraRef = useRef<any>(null);
+  const [mapOpen, setMapOpen] = useState(false);
 
+  const [zoom, setZoom] = useState(14);
   // const DEFAULT_COORDS = { latitude: 12.9716, longitude: 77.5946 }; // fallback
 
   // Fetch technician locations from API
@@ -128,20 +130,20 @@ export default function DashboardScreen() {
     };
   }, []);
 
-   const cards: {
-  title: string;
-  icon: CardIconName;
-  color: string;
-  value: string;
-  change: string;
-}[] = [
-    { title: "Active Fields", icon: "map-marker", color: "#1E88E5", value: "24", change: "+12%" },
-    { title: "Field Workers", icon: "account-group", color: "#009587", value: "156", change: "+5.1%" },
-    { title: "Scheduled Jobs", icon: "calendar-check", color: "#D9C425", value: "89", change: "+23%" },
-    { title: "Efficiency Rate", icon: "trending-up", color: "#6234E2", value: "94.2%", change: "+5.1%" },
-  ];
+  const cards: {
+    title: string;
+    icon: CardIconName;
+    color: string;
+    value: string;
+    change: string;
+  }[] = [
+      { title: "Active Fields", icon: "map-marker", color: "#1E88E5", value: "24", change: "+12%" },
+      { title: "Field Workers", icon: "account-group", color: "#009587", value: "156", change: "+5.1%" },
+      { title: "Scheduled Jobs", icon: "calendar-check", color: "#D9C425", value: "89", change: "+23%" },
+      { title: "Efficiency Rate", icon: "trending-up", color: "#6234E2", value: "94.2%", change: "+5.1%" },
+    ];
 
- const actions: { icon: ActionIconName; text: string; bg: string; color: string }[] = [
+  const actions: { icon: ActionIconName; text: string; bg: string; color: string }[] = [
     { icon: "file-plus", text: "Create New\nField Survey", bg: "#0078DB1A", color: "#1E88E5" },
     { icon: "account-plus", text: "Assign Field\nWorker", bg: "#0095871A", color: "#009587" },
     { icon: "calendar-clock", text: "Schedule\nMaintenance", bg: "#FDE6371A", color: "#D9C425" },
@@ -155,17 +157,17 @@ export default function DashboardScreen() {
     { title: "Quality inspection passed", sub: "East Region · 2 hours ago", color: "#009587", bg: "#E8F5E9", status: "Completed" },
   ];
   return (
-    <View style={{ flex: 1 }}>
+    <View >
       <ScrollView style={styles.container}>
-         <Header />
-      <HeaderSection
-        title="What services do you need?"
-        buttonText="+ New Field"
-        onButtonClick={() => console.log("New Field Clicked")}
-        onSearchChange={(text) => console.log("Searching:", text)}
-        currentScreen="DashboardScreen"   // ✅ add this
-      />
-       <View style={styles.cardContainer}>
+        <Header />
+        <HeaderSection
+          title="What services do you need?"
+          buttonText="+ New Field"
+          onButtonClick={() => console.log("New Field Clicked")}
+          onSearchChange={(text) => console.log("Searching:", text)}
+          currentScreen="DashboardScreen"   // ✅ add this
+        />
+        <View style={styles.cardContainer}>
           {cards.map((c, i) => (
             <View key={i} style={styles.card}>
               <View style={styles.cardHeader}>
@@ -179,31 +181,141 @@ export default function DashboardScreen() {
         </View>
 
         <Text style={styles.sectionTitle}>Live Technician Map</Text>
-        <View style={styles.mapContainer}>
-          <Mapbox.MapView style={styles.map}>
-            {userLocation && (
-              <Mapbox.Camera
-                ref={cameraRef}
-                centerCoordinate={[userLocation.longitude, userLocation.latitude]}
-                zoomLevel={14}
-              />
-            )}
-            <Mapbox.UserLocation visible showsUserHeadingIndicator />
-            {technicians.map((t) => (
-             <Mapbox.PointAnnotation
-  key={t.id.toString()}
-  id={`tech-${t.id}`}
-  coordinate={[t.current_location.longitude, t.current_location.latitude]}
->
 
-                <View style={styles.marker}>
-                  <Text style={styles.markerText}>🧑‍🔧</Text>
-                </View>
-              </Mapbox.PointAnnotation>
-            ))}
-          </Mapbox.MapView>
-        </View>
-      <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <Pressable onPress={() => setMapOpen(true)}>
+          <View style={styles.mapContainer}>
+            <Mapbox.MapView
+              style={styles.map}
+              scrollEnabled={false}
+              zoomEnabled={false}
+            >
+              {userLocation && (
+                <Mapbox.Camera
+                  centerCoordinate={[
+                    userLocation.longitude,
+                    userLocation.latitude,
+                  ]}
+                  zoomLevel={zoom}
+                />
+              )}
+
+              {/* ✅ USER ICON */}
+              {userLocation && (
+                <Mapbox.MarkerView
+                  coordinate={[
+                    userLocation.longitude,
+                    userLocation.latitude,
+                  ]}
+                  anchor={{ x: 0.5, y: 0.5 }}
+                >
+                  <View style={styles.userMarker}>
+                    <Ionicons name="person" size={22} color="#fff" />
+                  </View>
+                </Mapbox.MarkerView>
+              )}
+
+              {/* ✅ TECHNICIANS */}
+              {technicians.map((t) => (
+                <Mapbox.MarkerView
+                  key={`tech-${t.id}`}
+                  coordinate={[
+                    t.current_location.longitude,
+                    t.current_location.latitude,
+                  ]}
+                  anchor={{ x: 0.5, y: 0.5 }}
+                >
+                  <View style={styles.marker}>
+                    <Ionicons name="construct" size={22} color="#fff" />
+                  </View>
+                </Mapbox.MarkerView>
+              ))}
+            </Mapbox.MapView>
+          </View>
+        </Pressable>
+
+        <Modal visible={mapOpen} animationType="slide">
+          <View style={styles.fullMapContainer}>
+            <Pressable
+              style={styles.closeBtn}
+              onPress={() => setMapOpen(false)}
+            >
+              <Ionicons name="close" size={28} color="#000" />
+            </Pressable>
+
+            <Mapbox.MapView style={styles.fullMap}>
+              {userLocation && (
+                <Mapbox.Camera
+                  ref={cameraRef}
+                  centerCoordinate={[
+                    userLocation.longitude,
+                    userLocation.latitude,
+                  ]}
+                  zoomLevel={zoom}
+                />
+              )}
+
+              {/* ✅ USER ICON */}
+              {userLocation && (
+                <Mapbox.MarkerView
+                  coordinate={[
+                    userLocation.longitude,
+                    userLocation.latitude,
+                  ]}
+                  anchor={{ x: 0.5, y: 0.5 }}
+                >
+                  <View style={styles.userMarker}>
+                    <Ionicons name="person" size={22} color="#fff" />
+                  </View>
+                </Mapbox.MarkerView>
+              )}
+
+              {/* ✅ TECHNICIANS */}
+              {technicians.map((t) => (
+                <Mapbox.MarkerView
+                  key={`tech-${t.id}`}
+                  coordinate={[
+                    t.current_location.longitude,
+                    t.current_location.latitude,
+                  ]}
+                  anchor={{ x: 0.5, y: 0.5 }}
+                >
+                  <View style={styles.marker}>
+                    <Ionicons name="construct" size={22} color="#fff" />
+                  </View>
+                </Mapbox.MarkerView>
+              ))}
+            </Mapbox.MapView>
+
+            {/* ZOOM CONTROLS */}
+            <View style={styles.zoomControls}>
+              <Pressable
+                style={styles.zoomBtn}
+                onPress={() => {
+                  const z = zoom + 1;
+                  setZoom(z);
+                  cameraRef.current?.setCamera({ zoomLevel: z });
+                }}
+              >
+                <Ionicons name="add" size={24} />
+              </Pressable>
+
+              <Pressable
+                style={styles.zoomBtn}
+                onPress={() => {
+                  const z = zoom - 1;
+                  setZoom(z);
+                  cameraRef.current?.setCamera({ zoomLevel: z });
+                }}
+              >
+                <Ionicons name="remove" size={24} />
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+
+
+
+        <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.quickActions}>
           {actions.map((a, i) => (
             <TouchableOpacity key={i} style={styles.actionItem}>
@@ -240,6 +352,56 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
+  fullMapContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  fullMap: {
+    flex: 1,
+  },
+
+  closeBtn: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    zIndex: 10,
+    backgroundColor: '#fff',
+    padding: 6,
+    borderRadius: 20,
+    elevation: 4,
+  },
+
+  zoomControls: {
+    position: 'absolute',
+    right: 20,
+    bottom: 40,
+  },
+  zoomBtn: {
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 30,
+    marginBottom: 10,
+    elevation: 4,
+  },
+  userMarker: {
+    width: 36,
+    height: 36,
+    borderRadius: 19,
+    backgroundColor: '#2ECC71', // user green
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 6,
+  },
+  marker: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#6C63FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 5,
+  },
+
   container: {
     flex: 1,
     backgroundColor: "#FFF",
@@ -377,15 +539,6 @@ const styles = StyleSheet.create({
   },
   map: { flex: 1 },
 
-  marker: {
-    width: 34,
-    height: 34,
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#007AFF",
-  },
+
   markerText: { fontSize: 18 },
 });

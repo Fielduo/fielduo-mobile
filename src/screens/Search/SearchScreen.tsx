@@ -1,4 +1,5 @@
-import SearchMenu from '@/components/report-analysis/search-menu';
+import Header from '@/components/common/Header';
+import HeaderSection from '@/components/common/HeaderSection';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
@@ -7,11 +8,18 @@ import { View, Text, StyleSheet } from 'react-native';
 
 const SearchScreen = () => {
   return (
-    
-      <View style={styles.container}>
-        <SearchMenu/>
-      </View>
-    
+
+    <View >
+      <Header />
+      <HeaderSection
+        title="What services do you need?"
+        buttonText="+ New Field"
+        onButtonClick={() => console.log("New Field Clicked")}
+        onSearchChange={(text) => console.log("Searching:", text)}
+        currentScreen="DashboardScreen"   // ✅ add this
+      />
+    </View>
+
   );
 };
 

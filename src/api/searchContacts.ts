@@ -11,7 +11,7 @@ export const searchContacts = async (query: string): Promise<Contact[]> => {
   }
 
   try {
-    // Using your existing API wrapper (auto adds token)
+    
     const data = await api.get<Contact[]>(`/contacts/search?q=${query}`);
     return data;
   } catch (error) {

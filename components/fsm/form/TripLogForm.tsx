@@ -12,7 +12,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-// import { launchCamera, launchImageLibrary } from "react-native-image-picker";
+
 import { Picker } from "@react-native-picker/picker";
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
@@ -171,6 +171,7 @@ export default function TripLogForm() {
   const [technicianNotes, setTechnicianNotes] = useState("");
 
   const [formData, setFormData] = useState({
+    work_order_id: "",
     work_order_number: "",
     job_assignment_id: "",
     technician_name: "",
@@ -179,6 +180,7 @@ export default function TripLogForm() {
     site_address: "",
     gps_coordinates: "",
   });
+
   const [isAssignmentLoading, setIsAssignmentLoading] = useState(false);
 
   const totalMileage =
@@ -357,7 +359,7 @@ export default function TripLogForm() {
   const fetchWorkOrders = async () => {
     try {
       const res = await api.get<WorkOrderResponse>("/work_order");
-
+      console.log("📥 API Raw Response:", res);
       if (Array.isArray(res?.work_orders)) {
         setWorkOrders(res.work_orders);
       } else {
@@ -373,8 +375,15 @@ export default function TripLogForm() {
 
 
   const handleWorkOrderSelect = async (workOrderId: string) => {
+    console.log("▶️ handleWorkOrderSelect called with:", workOrderId);
+
     const selected = workOrders.find(w => w.id === workOrderId);
-    if (!selected) return;
+    console.log("Selected Work Order:", selected);
+
+    if (!selected) {
+      console.warn("⚠️ No work order found!");
+      return;
+    }
 
     // Update basic fields first
     setFormData(prev => ({
@@ -387,18 +396,24 @@ export default function TripLogForm() {
       status_id: selected.status_id,
       priority_id: selected.priority_id,
     }));
+    console.log("🟦 Basic form fields updated");
 
     try {
       setIsAssignmentLoading(true);
+      console.log("Fetching assignment for WO:", selected.work_order_number);
 
       // Fetch assignment
       const assignment: AssignmentResponse = await api.get(
-        `/triplog_job_assignments/by-work-order/${encodeURIComponent(selected.work_order_number)}`
+        `/triplog_job_assignments/by-work-order/${encodeURIComponent(
+          selected.work_order_number
+        )}`
       );
+
+      console.log("Assignment API response:", assignment);
 
       // If assignment NOT found
       if (!assignment || !assignment.job_assignment_id) {
-        Alert.alert("Info", "Technician not assigned for this Work Order");
+        console.warn("❌ Technician NOT assigned for this work order");
 
         setFormData(prev => ({
           ...prev,
@@ -413,20 +428,27 @@ export default function TripLogForm() {
         return;
       }
 
-      // Assignment found → fetch GPS (silently)
+      // Assignment found → fetch GPS
+      console.log("Assignment FOUND → Fetching GPS for work_order_id:", assignment.work_order_id);
+
       let gpsCoords = "";
       try {
         const gpsRes: GPSResponse = await api.get(
           `/work_orders_gps/${assignment.work_order_id}/gps`
         );
+        console.log("GPS Response:", gpsRes);
+
         if (gpsRes?.success && gpsRes.gps_coordinates) {
           gpsCoords = gpsRes.gps_coordinates;
+        } else {
+          console.log("No GPS found for this assignment");
         }
-      } catch {
-        // GPS not available → silently ignore, keep gpsCoords = ""
+      } catch (gpsErr) {
+        console.error("GPS fetch error:", gpsErr);
       }
 
       // Update form with assignment + GPS
+      console.log("Updating form with assignment + GPS");
       setFormData(prev => ({
         ...prev,
         job_assignment_id: assignment.job_assignment_id || "",
@@ -434,11 +456,12 @@ export default function TripLogForm() {
         vehicle_id: assignment.vehicle_id || "",
         site_name: assignment.site_name || "",
         site_address: assignment.site_address || "",
-        gps_coordinates: gpsCoords, // empty if not available
+        gps_coordinates: gpsCoords,
       }));
 
     } catch (err) {
-      // Only show alert if assignment fetch fails
+      console.error("❌ Assignment API Error:", err);
+
       Alert.alert("Info", "Technician not assigned for this Work Order");
 
       setFormData(prev => ({
@@ -451,9 +474,11 @@ export default function TripLogForm() {
         gps_coordinates: "",
       }));
     } finally {
+      console.log("⏹️ Ending assignment fetch");
       setIsAssignmentLoading(false);
     }
   };
+
 
 
   const handleSave = async () => {
@@ -576,7 +601,7 @@ export default function TripLogForm() {
   useEffect(() => {
     if (!data) return;
 
-    console.log("Prefilling TripLog data:", data);
+    // console.log("Prefilling TripLog data:", data);
 
     // Prefill main form state
     setForm({
@@ -592,8 +617,9 @@ export default function TripLogForm() {
 
     setFormData(prev => ({
       ...prev,
-      work_order_number: selectedWorkOrder?.work_order_number ?? data.work_order_number ?? "",
       work_order_id: selectedWorkOrder?.id ?? "",
+      work_order_number: selectedWorkOrder?.work_order_number ?? "",
+
       title: selectedWorkOrder?.title ?? "",
       job_assignment_id: data.job_assignment_id ?? "",
       technician_name: data.technician_name ?? "",
@@ -849,7 +875,7 @@ export default function TripLogForm() {
                         (o) => o.work_order_number === formData.work_order_number
                       );
                       return selectedOrder
-                        ? `${selectedOrder.work_order_number} - ${selectedOrder.title}`
+                        ? `${selectedOrder.work_order_number} `
                         : "-";
                     })()
                     : "-"}
@@ -859,20 +885,20 @@ export default function TripLogForm() {
               <View style={styles.pickerContainer}>
 
                 <Picker
-                  selectedValue={formData.work_order_number}
+                  selectedValue={formData.work_order_id}
                   onValueChange={handleWorkOrderSelect}
                   style={styles.pickerStyle}
-                  enabled={true}
                 >
                   <Picker.Item label="Select Work Order" value="" />
-                  {workOrders.map((order) => (
+                  {workOrders.map(order => (
                     <Picker.Item
                       key={order.id}
                       label={`${order.work_order_number} - ${order.title}`}
-                      value={order.work_order_number} // must match selectedValue
+                      value={order.id}     // IMPORTANT — send ID!
                     />
                   ))}
                 </Picker>
+
 
               </View>
             )}
@@ -1301,20 +1327,20 @@ export default function TripLogForm() {
             )}
 
             {/* Show file name and download button */}
-            {documentFile && (
-              <View style={{ marginTop: 6, flexDirection: "row", alignItems: "center" }}>
-                <Text
-                  style={{ color: "green", fontWeight: "600", flex: 1 }}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
-                  Selected: {documentFile.name || documentFile.fileName || "Attachment"}
-                </Text>
-
-
-
+            {documentFiles.length > 0 && (
+              <View style={{ marginTop: 6 }}>
+                {documentFiles.map((doc, index) => (
+                  <Text
+                    key={index}
+                    style={{ color: "green", fontWeight: "600" }}
+                    numberOfLines={1}
+                  >
+                    📎 {doc.name}
+                  </Text>
+                ))}
               </View>
             )}
+
           </View>
 
         </View>
