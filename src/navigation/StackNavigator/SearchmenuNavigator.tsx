@@ -46,7 +46,7 @@ import AccountsScreen from '@/components/CRM/View/Account';
 export type SearchMenuStackParamList = {
   SearchMenu: undefined;
   DashboardScreen: undefined;
-
+  SearchScreen: undefined;   // ✅ add
   //   //CRM
   Account: undefined;
   Contact: undefined;

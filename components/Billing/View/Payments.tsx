@@ -12,6 +12,8 @@ import HeaderSection from "../../common/HeaderSection";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
+import { paymentService } from "@/src/api/auth";
+import FilterModal, { AppliedFilter } from "@/components/common/FilterModal";
 
 
 // --- Types ---
@@ -19,7 +21,7 @@ export interface Payment {
   id: string;
   invoice_number: string;
   amount: number;
-  status_name: string;
+  status: string;
   customer_name: string;
   method: string;
   notes?: string;
@@ -32,6 +34,8 @@ export interface Payment {
 const Payments: React.FC = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const [filterVisible, setFilterVisible] = useState(false);
+  const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(null);
 
   const navigation =
     useNavigation<NativeStackNavigationProp<SearchMenuStackParamList>>();
@@ -43,38 +47,8 @@ const Payments: React.FC = () => {
   const fetchPayments = async () => {
     try {
       setLoading(true);
-      // TODO: replace with real API call
-      // const response = await ApiWrapper.get('/payments');
-      // setPayments(response.data.payments);
-
-      const sample: Payment[] = [
-        {
-          id: "1",
-          invoice_number: "INV-1001",
-          amount: 23600,
-          status_name: "Paid",
-          customer_name: "John Doe",
-          method: "UPI",
-          notes: "Paid via GPay",
-          payment_date: "2025-11-15",
-          reference: "TXN123456",
-          created_at: "2025-11-15",
-        },
-        {
-          id: "2",
-          invoice_number: "INV-1002",
-          amount: 1770,
-          status_name: "Pending",
-          customer_name: "Jane Smith",
-          method: "Bank Transfer",
-          notes: "Awaiting confirmation",
-          payment_date: "2025-11-18",
-          reference: "NEFT987654",
-          created_at: "2025-11-18",
-        },
-      ];
-
-      setPayments(sample);
+      const data = await paymentService.getAll();
+      setPayments(data);
     } catch (error) {
       console.error("Error fetching payments:", error);
       Alert.alert("Error", "Failed to load payments");
@@ -82,6 +56,7 @@ const Payments: React.FC = () => {
       setLoading(false);
     }
   };
+
 
   const handleCreateNewPayment = () => {
     // navigation.navigate("CreatePayment");
@@ -118,24 +93,24 @@ const Payments: React.FC = () => {
               <View
                 style={[
                   styles.badge,
-                  item.status_name === "Paid"
+                  item.status === "Paid"
                     ? styles.completed
-                    : item.status_name === "Pending"
-                    ? styles.inProgress
-                    : styles.pending,
+                    : item.status === "Pending"
+                      ? styles.inProgress
+                      : styles.pending,
                 ]}
               >
                 <Text
                   style={[
                     styles.badgeText,
-                    item.status_name === "Paid"
+                    item.status === "Paid"
                       ? styles.completedText
-                      : item.status_name === "Pending"
-                      ? styles.inProgressText
-                      : styles.pendingText,
+                      : item.status === "Pending"
+                        ? styles.inProgressText
+                        : styles.pendingText,
                   ]}
                 >
-                  {item.status_name}
+                  {item.status}
                 </Text>
               </View>
             </View>
@@ -211,7 +186,7 @@ const Payments: React.FC = () => {
         title="What services do you need?"
         buttonText="+ New Payment"
         onButtonClick={handleCreateNewPayment}
-        onSearchChange={(text) => console.log("Searching Payments:", text)}
+        onSearchPress={() => setFilterVisible(true)}   //  ADD
       />
 
       {/* Section Header */}
@@ -230,6 +205,17 @@ const Payments: React.FC = () => {
         renderItem={renderPaymentCard}
         contentContainerStyle={{ padding: 12 }}
       />
+      <FilterModal
+        visible={filterVisible}
+        module="payments"          // ✅ IMPORTANT
+        onClose={() => setFilterVisible(false)}
+        onApply={(filter) => {
+          console.log('Applied payment filter:', filter);
+          setAppliedFilter(filter);
+          // TODO: call API with filter params
+        }}
+      />
+
     </View>
   );
 };

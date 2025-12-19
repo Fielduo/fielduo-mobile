@@ -5,7 +5,7 @@ import { setupAutoSync } from "./database/sync";
 
 export default function App() {
   useEffect(() => {
-    console.log("✅ App started successfully!");
+    console.log(" App started successfully!");
   }, []);
   
 useEffect(() => {

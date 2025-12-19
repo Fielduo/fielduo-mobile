@@ -14,8 +14,8 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 import { api } from "@/src/api/cilent";
 import { Asset } from "@/types/Worker";
-
-
+import FilterModal, { AppliedFilter } from "@/components/common/FilterModal";
+import { Ionicons } from "@expo/vector-icons";
 
 
 
@@ -24,34 +24,80 @@ export default function AssetCard() {
     useNavigation<NativeStackNavigationProp<SearchMenuStackParamList>>();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(null);
+  const [filteredAssets, setFilteredAssets] = useState<Asset[]>([]);
+  type ViewMode = 'all' | 'recent';
+
+  const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('all');
+  const [recentAssets, setRecentAssets] = useState<Asset[]>([]);
 
   // 🔹 Fetch assets from backend
-const fetchAssets = async () => {
-  setLoading(true);
-  try {
-    const data = await api.get<Asset[]>('/newassets');
-    if (!data || data.length === 0) {
-      console.log("No assets found");
-      setAssets([]); // optional: clear list if empty
-    } else {
-      console.log("Fetched assets:", data);
-      setAssets(data);
+  const fetchAssets = async () => {
+    setLoading(true);
+    try {
+      const data = await api.get<Asset[]>('/newassets');
+      if (!data || data.length === 0) {
+
+        setAssets([]); // optional: clear list if empty
+      } else {
+
+        setAssets(data);
+      }
+    } catch (err) {
+      console.error("Error fetching assets:", err);
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.error("Error fetching assets:", err);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   useEffect(() => {
     fetchAssets();
   }, []);
 
+  useEffect(() => {
+    if (!appliedFilter) {
+      setFilteredAssets(assets);
+      return;
+    }
+
+    const { field, operator, value } = appliedFilter;
+
+    const result = assets.filter((item: any) => {
+      const itemValue = item[field];
+      if (!itemValue) return false;
+
+      if (operator === 'contains') {
+        return itemValue.toString().toLowerCase().includes(value.toLowerCase());
+      }
+      if (operator === '=') {
+        return itemValue.toString().toLowerCase() === value.toLowerCase();
+      }
+      if (operator === '>') return itemValue > value;
+      if (operator === '<') return itemValue < value;
+
+      return true;
+    });
+
+    setFilteredAssets(result);
+  }, [appliedFilter, assets]);
+
+
+
   // 🔹 View or Edit asset
   const handleCardPress = (asset: Asset) => {
+    setRecentAssets((prev) => {
+      const exists = prev.find((a) => a.id === asset.id);
+      if (exists) return prev;
+
+      // latest first, max 5 items
+      return [asset, ...prev].slice(0, 5);
+    });
+
     navigation.navigate("CreateAsset", { mode: "view", asset });
   };
+
 
   // 🔹 Create new asset
   const handleCreateNew = () => {
@@ -95,31 +141,82 @@ const fetchAssets = async () => {
     </TouchableOpacity>
   );
 
+  const displayAssets =
+    viewMode === 'all' ? filteredAssets : recentAssets;
+
   return (
     <View style={{ flex: 1, backgroundColor: "#FFF" }}>
       <Header />
       <HeaderSection
         title="What services do you need?"
-        buttonText="+ New Asset"
+        buttonText="+ New Assets"
         onButtonClick={handleCreateNew}
-        onSearchChange={(text) => console.log("Searching:", text)}
+        onSearchPress={() => setFilterOpen(true)} //  SEARCH CLICK
       />
+<View style={styles.headerRow}>
+  {/*  LEFT SIDE */}
+  <View style={styles.sectionHeader}>
+    <Text style={styles.subTitle}>FSM</Text>
+    <Text style={styles.title}>Assets</Text>
+    <Text style={styles.subtitle}>Updated just now</Text>
+  </View>
 
-      <View style={styles.sectionHeader}>
-        <Text style={styles.subTitle}>FSM</Text>
-        <Text style={styles.title}>Assets</Text>
-        <Text style={styles.subtitle}>Updated just now</Text>
+  {/*  RIGHT SIDE */}
+  <View style={{ position: 'relative' }}>
+    <TouchableOpacity
+      style={styles.filterBtn}
+      onPress={() => setDropdownOpen((prev) => !prev)}
+    >
+      <Text style={styles.filterText}>
+        {viewMode === 'all' ? 'All' : 'Recently Viewed'}
+      </Text>
+      <Ionicons name="chevron-down-outline" size={16} color="#444" />
+    </TouchableOpacity>
+
+    {dropdownOpen && (
+      <View style={styles.dropdown}>
+        <TouchableOpacity
+          style={styles.dropdownItem}
+          onPress={() => {
+            setViewMode('all');
+            setDropdownOpen(false);
+          }}
+        >
+          <Text>All</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.dropdownItem}
+          onPress={() => {
+            setViewMode('recent');
+            setDropdownOpen(false);
+          }}
+        >
+          <Text>Recently Viewed</Text>
+        </TouchableOpacity>
       </View>
+    )}
+  </View>
+</View>
+
+      <FilterModal
+        visible={filterOpen}
+        module="assets"
+        onClose={() => setFilterOpen(false)}
+        onApply={(filter) => setAppliedFilter(filter)}
+      />
 
       {loading ? (
         <ActivityIndicator size="large" color="#6234E2" style={{ marginTop: 30 }} />
       ) : (
         <FlatList
-          data={assets}
+          data={displayAssets}
           keyExtractor={(item) => String(item.id)}
           renderItem={renderAssetCard}
           contentContainerStyle={{ padding: 12 }}
         />
+
+
       )}
     </View>
   );
@@ -127,15 +224,17 @@ const fetchAssets = async () => {
 
 const styles = StyleSheet.create({
   sectionHeader: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingTop: 10,
     backgroundColor: "#FFF",
   },
   subTitle: {
+     flex: 1,
     color: "#6234E2",
     fontSize: 12,
     fontWeight: "600",
   },
+
   title: {
     fontSize: 18,
     fontWeight: "700",
@@ -145,6 +244,65 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#6B7280",
     marginBottom: 10,
+  },
+headerRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  paddingHorizontal: 16,
+  paddingTop: 10,
+  backgroundColor: '#FFF',
+},
+
+
+
+filterBtn: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+
+  height: 36,
+  minWidth: 170,
+  paddingHorizontal: 12,
+
+  borderWidth: 1,
+  borderColor: '#D1D5DB',
+  borderRadius: 6,
+  backgroundColor: '#fff',
+},
+
+ 
+  filterText: {
+    fontSize: 14,
+    marginRight: 6,
+    color: "#6C3EB5",
+
+    fontWeight: "700",
+  },
+  dropdown: {
+    position: 'absolute',
+    top: 40,
+    right: 0,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    width: 160,
+    zIndex: 999,
+    elevation: 4,
+  },
+
+  dropdownItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+
+
+  dropdownText: {
+    color: "#212121",
+    fontSize: 13,
+    fontWeight: "500",
   },
   card: {
     borderWidth: 1,

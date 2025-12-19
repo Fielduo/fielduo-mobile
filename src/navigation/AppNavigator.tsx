@@ -56,20 +56,19 @@ useEffect(() => {
 }, []);
 
   if (loading) return null; 
-
+const MainTabsWithLayout = () => {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Layout>
+      <BottomTabNavigator />
+    </Layout>
+  );
+};
+  return (
+     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {!user ? (
         <Stack.Screen name="AuthStack" component={AuthNavigator} />
       ) : (
-        <Stack.Screen
-          name="MainTabs"
-          component={() => (
-            <Layout>
-              <BottomTabNavigator />
-            </Layout>
-          )}
-        />
+        <Stack.Screen name="MainTabs" component={MainTabsWithLayout} />
       )}
     </Stack.Navigator>
   );

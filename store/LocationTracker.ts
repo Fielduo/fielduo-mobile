@@ -1,27 +1,11 @@
-import { 
+import {
   requestForegroundPermissionsAsync,
-  requestBackgroundPermissionsAsync,
-  getCurrentPositionAsync,
   watchPositionAsync,
   Accuracy,
-
 } from 'expo-location';
-import { getDistance } from 'geolib';
-import { Platform } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { api } from '@/src/api/cilent';
-
-type LocationObject = {
-  coords: {
-    latitude: number;
-    longitude: number;
-    accuracy: number | null;
-    altitude: number | null;
-    heading: number | null;
-    speed: number | null;
-  };
-  timestamp: number;
-};
+import { getDistance } from 'geolib';
 
 export interface MyLocation {
   coords: {
@@ -29,52 +13,20 @@ export interface MyLocation {
     longitude: number;
     accuracy: number;
     speed?: number;
-    altitude?: number;
-    heading?: number;
   };
   timestamp: number;
 }
 
-interface TrackerConfig {
-  STATIONARY_THRESHOLD: number;
-  MIN_DISTANCE_FILTER: number;
-  TRACKING_INTERVALS: {
-    STATIONARY: number;
-    SLOW_MOVING: number;
-    MOVING: number;
-    HIGH_SPEED: number;
-  };
-}
-
 class LocationTracker {
-  private config: TrackerConfig = {
-    STATIONARY_THRESHOLD: 10,
-    MIN_DISTANCE_FILTER: 50,
-    TRACKING_INTERVALS: {
-      STATIONARY: 5 * 60 * 1000,
-      SLOW_MOVING: 2 * 60 * 1000,
-      MOVING: 30 * 1000,
-      HIGH_SPEED: 10 * 1000,
-    },
-  };
-
   private lastLocation: MyLocation | null = null;
   private subscription: { remove: () => void } | null = null;
 
   onLocationUpdate: ((loc: MyLocation) => void) | null = null;
 
-  private determineTrackingMode(loc: MyLocation) {
-    const speed = loc.coords.speed || 0;
-    if (speed === 0) return 'STATIONARY';
-    if (speed < 10) return 'SLOW_MOVING';
-    if (speed < 50) return 'MOVING';
-    return 'HIGH_SPEED';
-  }
-
-  private isSignificantUpdate(newLoc: MyLocation) {
+  private isSignificant(newLoc: MyLocation) {
     if (!this.lastLocation) return true;
 
-    const distance = getDistance(
+    const dist = getDistance(
       {
         latitude: this.lastLocation.coords.latitude,
         longitude: this.lastLocation.coords.longitude,
@@ -85,76 +37,79 @@ class LocationTracker {
       }
     );
 
-    return distance >= this.config.MIN_DISTANCE_FILTER;
+   
+    return dist >= 10;
   }
 
   private async sendToBackend(loc: MyLocation) {
-    try {
-      const netState = await NetInfo.fetch();
-      if (!netState.isConnected) {
-        console.log("No network, skipping send");
-        return;
-      }
+    const net = await NetInfo.fetch();
 
-      console.log("Sending location:", loc);
-      const res = await api.post("/technician-locations/track", {
+    if (!net.isConnected) {
+     
+      return;
+    }
+
+    
+
+    try {
+      await api.post('/technician-locations/track', {
         latitude: loc.coords.latitude,
         longitude: loc.coords.longitude,
-        speed: loc.coords.speed || 0,
         accuracy: loc.coords.accuracy,
+        speed: loc.coords.speed ?? 0,
       });
-      console.log("Server response:", res);
-    } catch (err) {
-      console.log("Failed sending location:", err);
+
+     
+    } catch (e) {
+     
     }
   }
 
-async start() {
-  const { status } = await requestForegroundPermissionsAsync();
-  if (status !== 'granted') {
-    console.log("Foreground location permission denied");
-    return;
-  }
+  async start() {
+    
+    const { status } = await requestForegroundPermissionsAsync();
 
-  if (Platform.OS === 'android') {
-    await requestBackgroundPermissionsAsync();
-  }
 
-  const subscription = await watchPositionAsync(
-    {
-      accuracy: Accuracy.High,
-      timeInterval: this.config.TRACKING_INTERVALS.MOVING,
-      distanceInterval: this.config.MIN_DISTANCE_FILTER,
-    },
-    async (loc: LocationObject) => {
-      // Convert nullable fields to non-null
-      const myLoc: MyLocation = {
-        coords: {
-          latitude: loc.coords.latitude,
-          longitude: loc.coords.longitude,
-          accuracy: loc.coords.accuracy ?? 0,  // fallback if null
-          speed: loc.coords.speed ?? 0,        // fallback if null
-          altitude: loc.coords.altitude ?? 0,
-          heading: loc.coords.heading ?? 0,
-        },
-        timestamp: loc.timestamp,
-      };
+    if (status !== 'granted') {
+    
+      return;
+    }
 
-      if (this.isSignificantUpdate(myLoc)) {
+    this.subscription = await watchPositionAsync(
+      {
+        accuracy: Accuracy.High,
+        timeInterval: 9000,   // 🔥 every 3 sec
+        distanceInterval: 0,  // 🔥 even same location
+      },
+      async (loc) => {
+        
+
+        const myLoc: MyLocation = {
+          coords: {
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+            accuracy: loc.coords.accuracy ?? 0,
+            speed: loc.coords.speed ?? 0,
+          },
+          timestamp: loc.timestamp,
+        };
+
+        if (this.isSignificant(myLoc)) {
+         
+          this.lastLocation = myLoc;
+          this.onLocationUpdate?.(myLoc);
+        }
+
         await this.sendToBackend(myLoc);
-        this.lastLocation = myLoc;
-        this.onLocationUpdate?.(myLoc);
       }
-    }
-  );
-
-  this.subscription = { remove: () => subscription.remove() };
-}
-
+    );
+  }
 
   stop() {
+  
     this.subscription?.remove();
     this.subscription = null;
+    this.lastLocation = null;
   }
 }
 

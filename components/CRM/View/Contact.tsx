@@ -9,6 +9,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 import { api } from "@/src/api/cilent";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import FilterModal, { AppliedFilter } from "@/components/common/FilterModal";
 
 
 type ContactNavigationProp = NativeStackNavigationProp<
@@ -36,9 +37,18 @@ interface ContactItem {
 
 
 const Contact = () => {
-    const [contacts, setContacts] = useState<ContactItem[]>([]);
+
     const navigation = useNavigation<ContactNavigationProp>();
     const baseURL = api.getBaseUrl();
+    const [contacts, setContacts] = useState<ContactItem[]>([]);
+    const [filteredContacts, setFilteredContacts] = useState<ContactItem[]>([]);
+    const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(null);
+    const [filterOpen, setFilterOpen] = useState(false);
+    const [viewMode, setViewMode] = useState<'all' | 'recent'>('all');
+    const [recentContacts, setRecentContacts] = useState<ContactItem[]>([]);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+
+
 
     useEffect(() => {
         fetchContacts();
@@ -48,6 +58,8 @@ const Contact = () => {
         try {
             const res = await api.get<ContactItem[]>("/contacts");
             setContacts(res);
+            setFilteredContacts(res); // 🔥 default
+
         } catch (err) {
             console.log("Error loading contacts:", err);
         }
@@ -64,6 +76,51 @@ const Contact = () => {
 
         });
     };
+    useEffect(() => {
+        if (!appliedFilter) {
+            setFilteredContacts(contacts);
+            return;
+        }
+
+        const { field, operator, value } = appliedFilter;
+
+        const result = contacts.filter((item: any) => {
+            const itemValue = item[field];
+
+            if (!itemValue) return false;
+
+            // TEXT
+            if (operator === 'contains') {
+                return itemValue
+                    .toString()
+                    .toLowerCase()
+                    .includes(value.toLowerCase());
+            }
+
+            if (operator === '=') {
+                return itemValue
+                    .toString()
+                    .toLowerCase() === value.toLowerCase();
+            }
+
+            // NUMBER / DATE
+            if (operator === '>') {
+                return itemValue > value;
+            }
+
+            if (operator === '<') {
+                return itemValue < value;
+            }
+
+            return true;
+        });
+
+        setFilteredContacts(result);
+    }, [appliedFilter, contacts]);
+
+    const displayContacts =
+        viewMode === 'recent' ? recentContacts : filteredContacts;
+
     return (
         <View style={{ flex: 1, backgroundColor: "#FFF" }}>
             <Header />
@@ -71,12 +128,11 @@ const Contact = () => {
                 title="What services do you need?"
                 buttonText="+ New Contacts"
                 onButtonClick={() =>
-                    navigation.navigate("ContactForm", {
-                        mode: "create",
-                    })
+                    navigation.navigate("ContactForm", { mode: "create" })
                 }
-
+                onSearchPress={() => setFilterOpen(true)} // ✅ SEARCH CLICK
             />
+
             <ScrollView style={styles.container}>
                 <View style={styles.pageHeader}>
                     <View>
@@ -88,15 +144,48 @@ const Contact = () => {
 
                     </View>
 
-                    <TouchableOpacity style={styles.filterBtn}>
-                        <Text style={styles.filterText}>Recently Viewed</Text>
-                        <Ionicons name="chevron-down-outline" size={16} color="#444" />
-                    </TouchableOpacity>
+                    <View style={{ position: 'relative' }}>
+                        <TouchableOpacity
+                            style={styles.filterBtn}
+                            onPress={() => setDropdownOpen((p) => !p)}
+                        >
+                            <Text style={styles.filterText}>
+                                {viewMode === 'all' ? 'All' : 'Recently Viewed'}
+                            </Text>
+                            <Ionicons name="chevron-down-outline" size={16} color="#444" />
+                        </TouchableOpacity>
+
+                        {dropdownOpen && (
+                            <View style={styles.dropdown}>
+                                <TouchableOpacity
+                                    style={styles.dropdownItem}
+                                    onPress={() => {
+                                        setViewMode('all');
+                                        setDropdownOpen(false);
+                                    }}
+                                >
+                                    <Text>All</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={styles.dropdownItem}
+                                    onPress={() => {
+                                        setViewMode('recent');
+                                        setDropdownOpen(false);
+                                    }}
+                                >
+                                    <Text>Recently Viewed</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                    </View>
+
                 </View>
 
                 {/* ---------- SCROLL LIST ---------- */}
 
-                {contacts.map((item, index) => (
+                {displayContacts.map((item, index) => (
+
                     <View key={index} style={styles.card}>
                         <View style={styles.topRow}>
 
@@ -113,15 +202,26 @@ const Contact = () => {
                                 {item.first_name} {item.last_name}
                             </Text>
 
-                            <TouchableOpacity style={styles.viewBtn}>
-                                <Ionicons name="eye" size={18} color="#fff" />
-                                <Text onPress={() =>
+                            <TouchableOpacity
+                                style={styles.viewBtn}
+                                onPress={() => {
+                                    // 🔥 add to recent viewed
+                                    setRecentContacts((prev) => {
+                                        const exists = prev.find((c) => c.id === item.id);
+                                        if (exists) return prev;
+                                        return [item, ...prev].slice(0, 10); // max 10 recent
+                                    });
+
                                     navigation.navigate("ContactForm", {
                                         mode: "view",
-                                        data: item
-                                    })
-                                } style={styles.viewText}>View</Text>
+                                        data: item,
+                                    });
+                                }}
+                            >
+                                <Ionicons name="eye" size={18} color="#fff" />
+                                <Text style={styles.viewText}>View</Text>
                             </TouchableOpacity>
+
                         </View>
 
                         {/* ---- CONTACT INFO GRID ---- */}
@@ -187,9 +287,18 @@ const Contact = () => {
                         </View>
                     </View>
                 ))}
+                <FilterModal
+  visible={filterOpen}
+  module="contacts"
+  onClose={() => setFilterOpen(false)}
+  onApply={setAppliedFilter}
+/>
+
+
             </ScrollView>
 
         </View>
+
     );
 };
 
@@ -226,15 +335,21 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
 
-    filterBtn: {
-        flexDirection: "row",
-        alignItems: "center",
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderWidth: 1,
-        borderColor: "#D1D5DB",
-        borderRadius: 8,
-    },
+filterBtn: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+
+  height: 36,          // 🔒 fixed height
+  minWidth: 170,       // 🔒 same width always
+  paddingHorizontal: 12,
+
+  borderWidth: 1,
+  borderColor: "#D1D5DB",
+  borderRadius: 5,
+  backgroundColor: "#fff",
+},
+
 
     filterText: {
         fontSize: 14,
@@ -319,6 +434,24 @@ const styles = StyleSheet.create({
         color: "#1A1A1A",
         fontSize: 10,
         fontWeight: "600",
+    },
+    dropdown: {
+        position: 'absolute',
+        top: 40,
+        right: 0,
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        borderRadius: 8,
+        width: 160,
+        zIndex: 999,
+        elevation: 4,
+    },
+
+    dropdownItem: {
+        padding: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E5E7EB',
     },
 
 

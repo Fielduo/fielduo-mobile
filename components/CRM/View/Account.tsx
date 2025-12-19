@@ -1,46 +1,85 @@
-import React from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
 import Header from "../../common/Header";
 import HeaderSection from "../../common/HeaderSection";
 import { Ionicons } from "@expo/vector-icons";
+import { Account, accountsService } from "@/src/api/auth";
+import FilterModal, { AppliedFilter } from "@/components/common/FilterModal";
 
 
-const accounts = [
-    {
-        name: "lakshmims",
-        status: "Active",
-        type: "Partner",
-        industry: "IT",
-        credit: "₹899.97",
-        revenue: "₹50,000",
-        rating: "Hot",
-        color: "#00897B", // teal
-    },
-    {
-        name: "lakshmipriya srinivasan",
-        status: "Pending",
-        type: "Customer",
-        industry: "IT",
-        credit: "₹120,000",
-        revenue: "₹900,390",
-        rating: "Excellent",
-        color: "#FBC02D", // yellow
-    },
-];
+
 
 export default function AccountsScreen() {
+    const [accounts, setAccounts] = useState<Account[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [filterVisible, setFilterVisible] = useState(false);
+    const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(null);
+
+
+    const fetchAccounts = async () => {
+        try {
+            setLoading(true);
+            const data = await accountsService.getAll();
+            setAccounts(data);
+        } catch (err) {
+            console.error("Accounts fetch error:", err);
+            Alert.alert("Error", "Failed to load accounts");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchAccounts();
+    }, []);
+    const handleApplyFilter = (filter: AppliedFilter) => {
+        setAppliedFilter(filter);
+    };
+
+    const filteredAccounts = React.useMemo(() => {
+        if (!appliedFilter) return accounts;
+
+        const { field, operator, value } = appliedFilter;
+
+        return accounts.filter((acc: any) => {
+            const fieldValue = acc[field];
+
+            if (fieldValue == null) return false;
+
+            switch (operator) {
+                case 'contains':
+                    return String(fieldValue).toLowerCase().includes(value.toLowerCase());
+
+                case 'equals':
+                    return String(fieldValue).toLowerCase() === value.toLowerCase();
+
+                case 'starts_with':
+                    return String(fieldValue).toLowerCase().startsWith(value.toLowerCase());
+
+                case 'greater_than':
+                    return Number(fieldValue) > Number(value);
+
+                case 'less_than':
+                    return Number(fieldValue) < Number(value);
+
+                default:
+                    return true;
+            }
+        });
+    }, [accounts, appliedFilter]);
+
     return (
         <View style={{ flex: 1, backgroundColor: "#FFF" }}>
             <Header />
             <HeaderSection
                 title="What services do you need?"
-                buttonText="+ New Contacts"
-            //             onButtonClick={() =>
-            //   navigation.navigate("ContactForm", {
-            //     mode: "create",
-            //   })
-            // }
-
+                buttonText="+ New Accounts"
+                //             onButtonClick={() =>
+                //   navigation.navigate("ContactForm", {
+                //     mode: "create",
+                //   })
+                // }
+                onSearchPress={() => setFilterVisible(true)} //  Open filter modal
             />
             <ScrollView style={styles.container}>
 
@@ -49,7 +88,7 @@ export default function AccountsScreen() {
                     <View>
                         <Text style={styles.crmText}>CRM</Text>
                         <Text style={styles.pageTitle}>Accounts</Text>
-                        <Text style={styles.subTitle}>5 items - Updated just now</Text>
+                        <Text style={styles.subTitle}> Updated just now</Text>
                     </View>
 
                     <TouchableOpacity style={styles.filterBtn}>
@@ -59,58 +98,73 @@ export default function AccountsScreen() {
                 </View>
 
                 {/* Cards */}
-                {accounts.map((acc, i) => (
-                    <View key={i} style={[styles.card, { borderLeftColor: acc.color }]}>
+                {loading ? (
+                    <ActivityIndicator size="large" color="#6234E2" />
+                ) : (
+                    filteredAccounts.map((acc, i) => (
+                        <View key={acc.id} style={[styles.card, { borderLeftColor: "#6234E2" }]}>
 
-                        {/* Row 1 */}
-                        <View style={styles.row}>
-                            <View style={styles.col}>
-                                <Text style={styles.label}>Account Name</Text>
-                                <Text style={styles.value}>{acc.name}</Text>
-                            </View>
+                            {/* Row 1 */}
+                            <View style={styles.row}>
+                                <View style={styles.col}>
+                                    <Text style={styles.label}>Account Name</Text>
+                                    <Text style={styles.value}>{acc.name}</Text>
+                                </View>
 
-                            <View style={styles.col}>
-                                <Text style={styles.label}>Status</Text>
-                                <View style={[styles.statusBadge, getStatusStyle(acc.status)]}>
-                                    <Text style={[styles.statusText, getStatusTextStyle(acc.status)]}>
-                                        {acc.status}
-                                    </Text>
+                                <View style={styles.col}>
+                                    <Text style={styles.label}>Status</Text>
+                                    <View style={[styles.statusBadge, getStatusStyle(acc.status)]}>
+                                        <Text style={[styles.statusText, getStatusTextStyle(acc.status)]}>
+                                            {acc.status}
+                                        </Text>
+                                    </View>
+                                </View>
+
+                                <View style={styles.col}>
+                                    <Text style={styles.label}>Type</Text>
+                                    <Text style={styles.value}>{acc.type || "-"}</Text>
+                                </View>
+
+                                <View style={styles.col}>
+                                    <Text style={styles.label}>Industry</Text>
+                                    <Text style={styles.value}>{acc.industry || "-"}</Text>
                                 </View>
                             </View>
 
-                            <View style={styles.col}>
-                                <Text style={styles.label}>Type</Text>
-                                <Text style={styles.value}>{acc.type}</Text>
+                            <View style={styles.divider} />
+
+                            {/* Row 2 */}
+                            <View style={styles.row}>
+                                <View style={styles.col}>
+                                    <Text style={styles.label}>Credit Limit</Text>
+                                    <Text style={styles.value}>
+                                        {acc.credit_limit ? `₹${acc.credit_limit}` : "-"}
+                                    </Text>
+                                </View>
+
+                                <View style={styles.col}>
+                                    <Text style={styles.label}>Total Revenue</Text>
+                                    <Text style={styles.value}>
+                                        {acc.total_revenue ? `₹${acc.total_revenue}` : "-"}
+                                    </Text>
+                                </View>
+
+                                <View style={styles.col}>
+                                    <Text style={styles.label}>Customer Rating</Text>
+                                    <Text style={styles.value}>{acc.customer_rating || "-"}</Text>
+                                </View>
                             </View>
 
-                            <View style={styles.col}>
-                                <Text style={styles.label}>Industry</Text>
-                                <Text style={styles.value}>{acc.industry}</Text>
-                            </View>
                         </View>
+                    ))
+                )}
+<FilterModal
+  visible={filterVisible}
+  module="accounts"
+  onClose={() => setFilterVisible(false)}
+  onApply={handleApplyFilter}
+/>
 
-                        <View style={styles.divider} />
-
-                        {/* Row 2 */}
-                        <View style={styles.row}>
-                            <View style={styles.col}>
-                                <Text style={styles.label}>Credit Limit</Text>
-                                <Text style={styles.value}>{acc.credit}</Text>
-                            </View>
-
-                            <View style={styles.col}>
-                                <Text style={styles.label}>Total Revenue</Text>
-                                <Text style={styles.value}>{acc.revenue}</Text>
-                            </View>
-
-                            <View style={styles.col}>
-                                <Text style={styles.label}>Customer Rating</Text>
-                                <Text style={styles.value}>{acc.rating}</Text>
-                            </View>
-                        </View>
-
-                    </View>
-                ))}
             </ScrollView>
         </View>
     );
@@ -215,12 +269,12 @@ const styles = StyleSheet.create({
     },
 
     label: {
-        fontSize: 10,
+        fontSize: 11,
         color: "#777",
     },
 
     value: {
-        fontSize: 12,
+        fontSize: 10,
         fontWeight: "600",
         marginTop: 3,
         textTransform: "capitalize",

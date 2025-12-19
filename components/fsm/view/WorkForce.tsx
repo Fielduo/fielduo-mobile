@@ -17,6 +17,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 import { api } from "@/src/api/cilent";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import FilterModal, { AppliedFilter } from "@/components/common/FilterModal";
 
 
 
@@ -43,8 +44,13 @@ export default function WorkForce() {
     const [lastUpdated, setLastUpdated] = useState<string>("just now");
     const [dropdownVisible, setDropdownVisible] = useState(false);
     const [selectedAction, setSelectedAction] = useState("Recently Viewed");
-
+    const [viewMode, setViewMode] = useState<'all' | 'recent'>('all');
+    const [recentContacts, setRecentContacts] = useState<FieldWorker[]>([]);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
     const navigation = useNavigation<WorkForceNavigationProp>();
+    const [filterOpen, setFilterOpen] = useState(false);
+    const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(null);
+    const [filteredWorkers, setFilteredWorkers] = useState<FieldWorker[]>([]);
 
     // ✅ Fetch workforce from API
     const fetchWorkers = async () => {
@@ -53,11 +59,44 @@ export default function WorkForce() {
             const data = await api.get<FieldWorker[]>("/workerforce");
             setWorkers(data);
             setLoading(false);
+            setFilteredWorkers(data); // 🔥 default
         } catch (err) {
             console.error("Error fetching workforce:", err);
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        if (!appliedFilter) {
+            setFilteredWorkers(workers);
+            return;
+        }
+
+        const { field, operator, value } = appliedFilter;
+
+        const result = workers.filter((item: any) => {
+            const itemValue = item[field];
+            if (!itemValue) return false;
+
+            if (operator === 'contains') {
+                return itemValue
+                    .toString()
+                    .toLowerCase()
+                    .includes(value.toLowerCase());
+            }
+
+            if (operator === '=') {
+                return itemValue.toString().toLowerCase() === value.toLowerCase();
+            }
+
+            if (operator === '>') return itemValue > value;
+            if (operator === '<') return itemValue < value;
+
+            return true;
+        });
+
+        setFilteredWorkers(result);
+    }, [appliedFilter, workers]);
 
     useEffect(() => {
         fetchWorkers();
@@ -92,19 +131,29 @@ export default function WorkForce() {
                     />
                     <Text style={styles.name}>{item.full_name}</Text>
                 </View>
-
                 <TouchableOpacity
                     style={styles.viewButton}
-                    onPress={() =>
+                    onPress={() => {
+                        // Add worker to recently viewed
+                        setRecentContacts(prev => {
+                            // Avoid duplicates
+                            const exists = prev.find(w => w.id === item.id);
+                            if (exists) return prev;
+                            // Add to the beginning (most recent first)
+                            return [item, ...prev];
+                        });
+
+                        // Navigate to view form
                         navigation.navigate("WorkForceForm", {
                             mode: "view",
                             worker: item as unknown as any,
-                        })
-                    }
+                        });
+                    }}
                 >
                     <MaterialCommunityIcons name="eye-outline" size={16} color="#fff" />
                     <Text style={styles.viewText}>View</Text>
                 </TouchableOpacity>
+
             </View>
 
             {/* Info Grid */}
@@ -166,6 +215,8 @@ export default function WorkForce() {
     );
 
     if (loading) return <ActivityIndicator size="large" color="#6234E2" style={{ flex: 1 }} />;
+    const displayContacts =
+        viewMode === 'recent' ? recentContacts : filteredWorkers;
 
     return (
         <View style={{ flex: 1, backgroundColor: "#FFF" }}>
@@ -176,7 +227,7 @@ export default function WorkForce() {
                 onButtonClick={() =>
                     navigation.navigate("WorkForceForm", { mode: "create" })
                 }
-                onSearchChange={(text) => console.log("Searching:", text)}
+                onSearchPress={() => setFilterOpen(true)} // ✅ SEARCH CLICK
             />
 
             <View style={styles.container}>
@@ -189,49 +240,57 @@ export default function WorkForce() {
                         </Text>
                     </View>
                     {/* Dropdown code remains same */}
-                    <View>
+                    <View style={{ position: 'relative' }}>
                         <TouchableOpacity
-                            style={styles.roundDropdownButton}
-                            onPress={() => setDropdownVisible(!dropdownVisible)}
-                            activeOpacity={0.8}
+                            style={styles.filterBtn}
+                            onPress={() => setDropdownOpen((p) => !p)}
                         >
-                            <Text style={styles.roundDropdownText}>{selectedAction}</Text>
-                            <MaterialCommunityIcons
-                                name={dropdownVisible ? "chevron-up" : "chevron-down"}
-                                size={18}
-                                color="#545454"
-                            />
+                            <Text style={styles.filterText}>
+                                {viewMode === 'all' ? 'All' : 'Recently Viewed'}
+                            </Text>
+                            <Ionicons name="chevron-down-outline" size={16} color="#444" />
                         </TouchableOpacity>
 
-                        {dropdownVisible && (
-                            <View style={styles.roundDropdownMenu}>
-                                {["Recently Viewed"].map((action, i) => (
-                                    <TouchableOpacity
-                                        key={i}
-                                        style={[
-                                            styles.dropdownItem,
-                                            i === 2 && { borderBottomWidth: 0 },
-                                        ]}
-                                        onPress={() => {
-                                            setSelectedAction(action);
-                                            setDropdownVisible(false);
-                                        }}
-                                    >
-                                        <Text style={styles.dropdownText}>{action}</Text>
-                                    </TouchableOpacity>
-                                ))}
+                        {dropdownOpen && (
+                            <View style={styles.dropdown}>
+                                <TouchableOpacity
+                                    style={styles.dropdownItem}
+                                    onPress={() => {
+                                        setViewMode('all');
+                                        setDropdownOpen(false);
+                                    }}
+                                >
+                                    <Text>All</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={styles.dropdownItem}
+                                    onPress={() => {
+                                        setViewMode('recent');
+                                        setDropdownOpen(false);
+                                    }}
+                                >
+                                    <Text>Recently Viewed</Text>
+                                </TouchableOpacity>
                             </View>
                         )}
                     </View>
-
                 </View>
 
                 <FlatList
-                    data={workers}
+                    data={displayContacts}
                     renderItem={renderItem}
                     keyExtractor={(item) => item.id}
                     showsVerticalScrollIndicator={false}
                 />
+                <FilterModal
+                    visible={filterOpen}
+                    module="workforce"
+                    onClose={() => setFilterOpen(false)}
+                    onApply={setAppliedFilter}
+                />
+
+
             </View>
         </View>
     );
@@ -252,50 +311,48 @@ const styles = StyleSheet.create({
         alignItems: "flex-start",
         marginBottom: 14,
     },
-    roundDropdownButton: {
+    filterBtn: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        backgroundColor: "white",
-        paddingHorizontal: 10,
-        borderRadius: 4,
-        borderColor: "#545454",
-        borderWidth: 0.5,
-        shadowColor: "#000",
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-        shadowOffset: { width: 0, height: 2 },
-        elevation: 3,
-        width: 150,
-        height: 36,
+
+        height: 36,          // 🔒 fixed height
+        minWidth: 170,       // 🔒 same width always
+        paddingHorizontal: 12,
+
+        borderWidth: 1,
+        borderColor: "#D1D5DB",
+        borderRadius: 5,
+        backgroundColor: "#fff",
     },
-    roundDropdownText: {
-        color: "#6234E2",
-        fontSize: 13,
-        fontWeight: "600",
+
+    filterText: {
+        fontSize: 14,
         marginRight: 6,
+        color: "#6C3EB5",
+
+        fontWeight: "700",
     },
-    roundDropdownMenu: {
-        position: "absolute",
+    dropdown: {
+        position: 'absolute',
         top: 40,
         right: 0,
-        backgroundColor: "#fff",
-        borderRadius: 5,
-        shadowColor: "#000",
-        shadowOpacity: 0.15,
-        shadowRadius: 6,
-        shadowOffset: { width: 0, height: 2 },
-        elevation: 5,
-        width: 150,
-        zIndex: 10,
-        overflow: "hidden",
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        borderRadius: 8,
+        width: 160,
+        zIndex: 999,
+        elevation: 4,
     },
+
     dropdownItem: {
-        paddingVertical: 10,
-        paddingHorizontal: 14,
+        padding: 12,
         borderBottomWidth: 1,
-        borderBottomColor: "#EAEAEA",
+        borderBottomColor: '#E5E7EB',
     },
+
+
     dropdownText: {
         color: "#212121",
         fontSize: 13,

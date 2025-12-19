@@ -46,7 +46,7 @@ type MenuIconName =
   | "comment-text-outline"
   | "credit-card-outline";
 
-const menuSections: {
+export const menuSections: {
   title: string;
   items: { name: string; icon: MenuIconName; route: string }[];
 }[] = [
@@ -78,13 +78,14 @@ const menuSections: {
         { name: "Fleet", icon: "car-outline", route: "Vehicles" },
         { name: "New Service Contract", icon: "file-document-edit-outline", route: "ServiceContract" },
         { name: "Work Order", icon: "clipboard-list-outline", route: "Workorder" },
-
+{ name: "Job Assignment", icon: "map-marker-distance", route: "FieldWorkerTrip" },
         { name: "Job Schedule", icon: "calendar-clock", route: "Schedule" },
-        { name: "Job Assignment", icon: "map-marker-distance", route: "FieldWorkerTrip" },
-
-        { name: "Work Complete Status", icon: "clipboard-check-outline", route: "WorkCompletion" },
+        
+  { name: "Trips Logs", icon: "file-chart-outline", route: "TripLog" },
         { name: "Service Report", icon: "file-document-outline", route: "ServiceReport" },
-        { name: "Trips Logs", icon: "file-chart-outline", route: "TripLog" },
+        { name: "Work Complete Status", icon: "clipboard-check-outline", route: "WorkCompletion" },
+       
+       
       ],
     },
     {

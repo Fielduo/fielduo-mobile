@@ -13,19 +13,13 @@ import {
 import Constants from "expo-constants";
 import Header from "../common/Header";
 import HeaderSection from "../common/HeaderSection";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Feather, Ionicons, MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import LocationTracker from "@/store/LocationTracker";
+import BackgroundTracker from "@/store/BackgroundTracker";
+import { useNavigation } from "@react-navigation/native";
 
-type ActionIconName =
-  | "file-plus"
-  | "account-plus"
-  | "calendar-clock"
-  | "file-chart";
-type CardIconName =
-  | "map-marker"
-  | "account-group"
-  | "calendar-check"
-  | "trending-up";
+
+
 const mapboxToken = Constants.expoConfig?.extra?.MAPBOX_ACCESS_TOKEN;
 
 if (!mapboxToken) {
@@ -35,6 +29,7 @@ if (!mapboxToken) {
 Mapbox.setAccessToken(mapboxToken);
 // -------------------- Type Definitions --------------------
 type TechnicianLocation = {
+  technician_name: string;
   id: number;
   technician_id: number;
   organization_id: number;
@@ -64,17 +59,59 @@ type TechnicianLocationResponse = {
   technician_locations: TechnicianLocation[];
 };
 
-// -------------------- Component --------------------
+
+type ActionIconName =
+  | "file-plus"
+  | "account-plus"
+  | "calendar-clock"
+  | "file-chart";
+
+type DashboardMetrics = {
+  job_metrics: {
+    total_jobs: number;
+    completed_jobs: number;
+    pending_jobs: number;
+    overdue_jobs: number;
+    scheduled_jobs: number;
+    rescheduled_jobs: number;
+    cancelled_jobs: number;
+    in_progress_jobs: number;
+  };
+  active_technicians: number;
+  revenue: {
+    today: number;
+    week: number;
+    pending: number;
+  };
+  alerts: {
+    delayed_job: number;
+    technician_offline: number;
+    customer_escalation: number;
+    equipment_maintenance: number;
+    low_inventory: number;
+  };
+};
+
+
+
+
+
 export default function DashboardScreen() {
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [technicians, setTechnicians] = useState<TechnicianLocation[]>([]);
   const cameraRef = useRef<any>(null);
   const [mapOpen, setMapOpen] = useState(false);
-
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [zoom, setZoom] = useState(14);
-  // const DEFAULT_COORDS = { latitude: 12.9716, longitude: 77.5946 }; // fallback
+const navigation = useNavigation<any>();
 
-  // Fetch technician locations from API
+  const [selectedTech, setSelectedTech] = useState<any>(null);
+  const popupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+
+
+// Fetch technician locations from API
   const fetchTechnicians = async () => {
     try {
       const res = await api.get<TechnicianLocationResponse>("/technician-locations");
@@ -84,6 +121,58 @@ export default function DashboardScreen() {
     }
   };
 
+const actions: {
+  icon: ActionIconName;
+  text: string;
+  bg: string;
+  color: string;
+  screen: string;
+}[] = [
+  {
+    icon: "file-plus",
+    text: "Create New\n Triplog",
+    bg: "#0078DB1A",
+    color: "#1E88E5",
+    screen: "TripLogForm",
+  },
+  {
+    icon: "account-plus",
+    text: "Assign Field\nWorker",
+    bg: "#0095871A",
+    color: "#009587",
+    screen: "FieldWorkerTripForm",
+  },
+  {
+    icon: "calendar-clock",
+    text: "Schedule\nMaintenance",
+    bg: "#FDE6371A",
+    color: "#D9C425",
+    screen: "Schedule",
+  },
+  // {
+  //   icon: "file-chart",
+  //   text: "Generate\nReport",
+  //   bg: "#6234E21A",
+  //   color: "#6234E2",
+  //   screen: "ServiceReportForm",
+  // },
+];
+
+  const activities = [
+    { title: "New field survey completed", sub: "North District · 2 min ago", color: "#009587", bg: "#E8F5E9", status: "Completed" },
+    { title: "Equipment maintenance scheduled", sub: "Central Hub · 15 min ago", color: "#D9C425", bg: "#FFF8E1", status: "Pending" },
+    { title: "Worker John assigned to Field #42", sub: "South District · 1 hour ago", color: "#1E88E5", bg: "#E3F2FD", status: "Active" },
+    { title: "Quality inspection passed", sub: "East Region · 2 hours ago", color: "#009587", bg: "#E8F5E9", status: "Completed" },
+  ];
+  const statusColor = (status: string) => {
+    switch (status) {
+      case "IDLE": return "#22C55E";
+      case "TRAVELING_SLOWLY": return "#F59E0B";
+      case "IN_TRANSIT": return "#3B82F6";
+      case "HIGH_SPEED": return "#EF4444";
+      default: return "#6B7280";
+    }
+  };
   // Move camera on map
   const moveCamera = (coords: { latitude: number; longitude: number }) => {
     cameraRef.current?.setCamera({
@@ -93,119 +182,225 @@ export default function DashboardScreen() {
     });
   };
 
+
   useEffect(() => {
-    const initLocation = async () => {
-      try {
-        const { status } = await requestForegroundPermissionsAsync();
-        if (status !== "granted") {
-          console.log("Location permission denied");
-          return;
-        }
+    let mounted = true;
 
-        const loc = await getCurrentPositionAsync({ accuracy: Accuracy.Highest });
-        const coords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
-        setUserLocation(coords);
-        moveCamera(coords);
-
-        // Start tracking location updates
-        LocationTracker.onLocationUpdate = (loc) => {
-          const newCoords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
-          setUserLocation(newCoords);
-          moveCamera(newCoords);
-        };
-        LocationTracker.start();
-      } catch (err) {
-        console.log("Failed to get initial location:", err);
+    const init = async () => {
+      const { status } = await requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('❌ Location permission denied');
+        return;
       }
+
+      const loc = await getCurrentPositionAsync({
+        accuracy: Accuracy.High,
+      });
+
+      if (!mounted) return;
+
+      const coords = {
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+      };
+
+      setUserLocation(coords);
+      moveCamera(coords);
+
+      LocationTracker.onLocationUpdate = (l) => {
+        const c = {
+          latitude: l.coords.latitude,
+          longitude: l.coords.longitude,
+        };
+        setUserLocation(c);
+        moveCamera(c);
+      };
+
+      LocationTracker.start();       // FG UI tracking
+      BackgroundTracker.start();     // BG REAL tracking
     };
 
-    initLocation();
-
+    init();
     fetchTechnicians();
-    const interval = setInterval(fetchTechnicians, 15000);
+
+    const i = setInterval(fetchTechnicians, 3000); // 🔥 real time
+
 
     return () => {
+      mounted = false;
       LocationTracker.stop();
-      clearInterval(interval);
+      clearInterval(i);
     };
   }, []);
 
-  const cards: {
+  useEffect(() => {
+    const fetchDashboardData = async (): Promise<void> => {
+      try {
+        const raw = await api.get<any>('/dashboards/metrics');
+
+        const normalized: DashboardMetrics = {
+          job_metrics: {
+            total_jobs: raw.job_metrics?.total_jobs ?? 0,
+            completed_jobs: raw.job_metrics?.completed_jobs ?? 0,
+            pending_jobs: raw.job_metrics?.pending_jobs ?? 0,
+            overdue_jobs: raw.job_metrics?.overdue_jobs ?? 0,
+            scheduled_jobs: raw.job_status_breakdown?.Scheduled ?? 0,
+            rescheduled_jobs: raw.job_status_breakdown?.Rescheduled ?? 0,
+            cancelled_jobs: raw.job_status_breakdown?.Cancelled ?? 0,
+            in_progress_jobs: raw.job_status_breakdown?.["In Progress"] ?? 0,
+          },
+          active_technicians: raw.active_technicians ?? 0,
+          revenue: {
+            today: raw.revenue?.total_revenue ?? 0,
+            week: raw.revenue?.weekly_total ?? 0,
+            pending: raw.revenue?.pending_revenue ?? 0,
+          },
+          alerts: {
+            delayed_job: 0,
+            technician_offline: 0,
+            customer_escalation: 0,
+            equipment_maintenance: 0,
+            low_inventory: 0,
+          },
+        };
+
+        setMetrics(normalized);
+      } catch (error) {
+        console.log("Dashboard load failed", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData(); // ✅ USED
+
+    const intervalId = setInterval(fetchDashboardData, 5 * 60 * 1000);
+    return () => clearInterval(intervalId);
+  }, []);
+
+
+  const StatCard = ({
+    title,
+    value,
+    icon,
+    color,
+  }: {
     title: string;
-    icon: CardIconName;
+    value: number;
+    icon: React.ReactNode;
     color: string;
-    value: string;
-    change: string;
-  }[] = [
-      { title: "Active Fields", icon: "map-marker", color: "#1E88E5", value: "24", change: "+12%" },
-      { title: "Field Workers", icon: "account-group", color: "#009587", value: "156", change: "+5.1%" },
-      { title: "Scheduled Jobs", icon: "calendar-check", color: "#D9C425", value: "89", change: "+23%" },
-      { title: "Efficiency Rate", icon: "trending-up", color: "#6234E2", value: "94.2%", change: "+5.1%" },
-    ];
+  }) => {
+    return (
+      <View style={styles.card}>
+        <View style={styles.row}>
+          <Text style={styles.cardTitle}>{title}</Text>
+          <View style={[styles.iconBox, { backgroundColor: color + '20' }]}>
+            {icon}
+          </View>
+        </View>
+        <Text style={styles.cardValue}>{value}</Text>
+      </View>
+    );
+  };
 
-  const actions: { icon: ActionIconName; text: string; bg: string; color: string }[] = [
-    { icon: "file-plus", text: "Create New\nField Survey", bg: "#0078DB1A", color: "#1E88E5" },
-    { icon: "account-plus", text: "Assign Field\nWorker", bg: "#0095871A", color: "#009587" },
-    { icon: "calendar-clock", text: "Schedule\nMaintenance", bg: "#FDE6371A", color: "#D9C425" },
-    { icon: "file-chart", text: "Generate\nReport", bg: "#6234E21A", color: "#6234E2" },
-  ];
+  const onTechPress = (tech: any) => {
 
-  const activities = [
-    { title: "New field survey completed", sub: "North District · 2 min ago", color: "#009587", bg: "#E8F5E9", status: "Completed" },
-    { title: "Equipment maintenance scheduled", sub: "Central Hub · 15 min ago", color: "#D9C425", bg: "#FFF8E1", status: "Pending" },
-    { title: "Worker John assigned to Field #42", sub: "South District · 1 hour ago", color: "#1E88E5", bg: "#E3F2FD", status: "Active" },
-    { title: "Quality inspection passed", sub: "East Region · 2 hours ago", color: "#009587", bg: "#E8F5E9", status: "Completed" },
-  ];
+
+    setSelectedTech(tech);
+
+    // clear old timer
+    if (popupTimerRef.current) {
+
+      clearTimeout(popupTimerRef.current);
+    }
+
+    // auto close after 1 min
+    popupTimerRef.current = setTimeout(() => {
+
+      setSelectedTech(null);
+    }, 60 * 1000);
+
+
+  };
+
+
   return (
-    <View >
+   <View style={{ flex: 1 }}> 
       <ScrollView style={styles.container}>
         <Header />
-        <HeaderSection
-          title="What services do you need?"
-          buttonText="+ New Field"
-          onButtonClick={() => console.log("New Field Clicked")}
-          onSearchChange={(text) => console.log("Searching:", text)}
-          currentScreen="DashboardScreen"   // ✅ add this
-        />
-        <View style={styles.cardContainer}>
-          {cards.map((c, i) => (
-            <View key={i} style={styles.card}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.cardTitle}>{c.title}</Text>
-                <MaterialCommunityIcons name={c.icon} size={24} color={c.color} />
-              </View>
-              <Text style={[styles.cardValue, { color: c.color }]}>{c.value}</Text>
-              <Text style={styles.cardSubText}><Text style={styles.percentText}>{c.change}</Text> from last month</Text>
-            </View>
-          ))}
+        
+
+
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.title}>Field Service Management Dashboard</Text>
+            <Text style={styles.subtitle}>
+              Real-time insights into your service operations
+            </Text>
+          </View>
+
+          <View style={styles.bell}>
+            <Ionicons name="notifications-outline" size={20} color="#000" />
+          </View>
+        </View>
+
+        {/* Stats */}
+        <View style={styles.grid}>
+          <StatCard
+            title="Total Jobs"
+            value={metrics?.job_metrics.total_jobs ?? 0}
+            color="#3B82F6"
+            icon={<Ionicons name="calendar-outline" size={18} color="#3B82F6" />}
+          />
+
+          <StatCard
+            title="Completed Jobs"
+            value={metrics?.job_metrics.completed_jobs ?? 0}
+            color="#22C55E"
+            icon={<Feather name="trending-up" size={18} color="#22C55E" />}
+          />
+
+          <StatCard
+            title="Pending Jobs"
+            value={metrics?.job_metrics.pending_jobs ?? 0}
+            color="#FACC15"
+            icon={<MaterialIcons name="warning-amber" size={18} color="#FACC15" />}
+          />
+
+          <StatCard
+            title="Overdue Jobs"
+            value={metrics?.job_metrics.overdue_jobs ?? 0}
+            color="#EF4444"
+            icon={<MaterialIcons name="error-outline" size={18} color="#EF4444" />}
+          />
+
+         <View style={[styles.statWrapper, styles.centerItem]}>
+    <StatCard
+      title="Active Technicians"
+      value={metrics?.active_technicians ?? 0}
+      color="#A855F7"
+      icon={<Ionicons name="people-outline" size={18} color="#A855F7" />}
+    />
+  </View>
+
         </View>
 
         <Text style={styles.sectionTitle}>Live Technician Map</Text>
 
         <Pressable onPress={() => setMapOpen(true)}>
           <View style={styles.mapContainer}>
-            <Mapbox.MapView
-              style={styles.map}
-              scrollEnabled={false}
-              zoomEnabled={false}
-            >
+            <Mapbox.MapView style={styles.map} scrollEnabled={false} zoomEnabled={false}>
               {userLocation && (
                 <Mapbox.Camera
-                  centerCoordinate={[
-                    userLocation.longitude,
-                    userLocation.latitude,
-                  ]}
+                  centerCoordinate={[userLocation.longitude, userLocation.latitude]}
                   zoomLevel={zoom}
                 />
               )}
 
-              {/* ✅ USER ICON */}
+              {/* USER ICON */}
               {userLocation && (
                 <Mapbox.MarkerView
-                  coordinate={[
-                    userLocation.longitude,
-                    userLocation.latitude,
-                  ]}
+                  coordinate={[userLocation.longitude, userLocation.latitude]}
                   anchor={{ x: 0.5, y: 0.5 }}
                 >
                   <View style={styles.userMarker}>
@@ -214,31 +409,81 @@ export default function DashboardScreen() {
                 </Mapbox.MarkerView>
               )}
 
-              {/* ✅ TECHNICIANS */}
+              {/* TECHNICIANS */}
               {technicians.map((t) => (
                 <Mapbox.MarkerView
                   key={`tech-${t.id}`}
-                  coordinate={[
-                    t.current_location.longitude,
-                    t.current_location.latitude,
-                  ]}
+                  coordinate={[t.current_location.longitude, t.current_location.latitude]}
                   anchor={{ x: 0.5, y: 0.5 }}
                 >
-                  <View style={styles.marker}>
-                    <Ionicons name="construct" size={22} color="#fff" />
-                  </View>
+                  <Pressable onPress={() => onTechPress(t)}>
+                    <View
+                      style={[
+                        styles.marker,
+                        { backgroundColor: statusColor(t.current_location.status) },
+                      ]}
+                    >
+                      <Ionicons name="construct" size={20} color="#fff" />
+                    </View>
+                  </Pressable>
                 </Mapbox.MarkerView>
               ))}
+
             </Mapbox.MapView>
+            <View style={styles.statusLegend}>
+              {[
+                { label: 'IDLE', color: '#22C55E' },
+                { label: 'TRAVELING SLOWLY', color: '#F59E0B' },
+                { label: 'IN TRANSIT', color: '#3B82F6' },
+                { label: 'HIGH SPEED', color: '#EF4444' },
+              ].map((status) => (
+                <View key={status.label} style={styles.legendRow}>
+                  <View style={[styles.legendColor, { backgroundColor: status.color }]} />
+                  <Text style={styles.legendLabel}>{status.label}</Text>
+                </View>
+              ))}
+            </View>
+            {/* Technician popup */}
+            {selectedTech && (
+              <View
+                style={{
+                  position: 'absolute',
+                  left: Dimensions.get('window').width / 2 - 80, // center horizontally
+                  top: 100, // adjust vertical position as needed
+                  width: 160,
+                  backgroundColor: '#E0D7FF',
+                  padding: 8,
+                  borderRadius: 8,
+                  elevation: 5,
+                  zIndex: 10,
+                }}
+              >
+                <Text style={{ fontWeight: '700', marginBottom: 4 }}>
+                  {selectedTech.technician_name}
+                </Text>
+                <Text>Status: {selectedTech.current_location.status}</Text>
+                <Text>Speed: {selectedTech.current_location.speed} km/h</Text>
+
+                <Pressable
+                  onPress={() => setSelectedTech(null)}
+                  style={{
+                    marginTop: 6,
+                    backgroundColor: '#A855F7',
+                    borderRadius: 6,
+                    paddingVertical: 4,
+                  }}
+                >
+                  <Text style={{ color: '#fff', textAlign: 'center' }}>Close</Text>
+                </Pressable>
+              </View>
+            )}
+
           </View>
         </Pressable>
 
         <Modal visible={mapOpen} animationType="slide">
           <View style={styles.fullMapContainer}>
-            <Pressable
-              style={styles.closeBtn}
-              onPress={() => setMapOpen(false)}
-            >
+            <Pressable style={styles.closeBtn} onPress={() => setMapOpen(false)}>
               <Ionicons name="close" size={28} color="#000" />
             </Pressable>
 
@@ -246,21 +491,15 @@ export default function DashboardScreen() {
               {userLocation && (
                 <Mapbox.Camera
                   ref={cameraRef}
-                  centerCoordinate={[
-                    userLocation.longitude,
-                    userLocation.latitude,
-                  ]}
+                  centerCoordinate={[userLocation.longitude, userLocation.latitude]}
                   zoomLevel={zoom}
                 />
               )}
 
-              {/* ✅ USER ICON */}
+              {/* USER ICON */}
               {userLocation && (
                 <Mapbox.MarkerView
-                  coordinate={[
-                    userLocation.longitude,
-                    userLocation.latitude,
-                  ]}
+                  coordinate={[userLocation.longitude, userLocation.latitude]}
                   anchor={{ x: 0.5, y: 0.5 }}
                 >
                   <View style={styles.userMarker}>
@@ -269,23 +508,75 @@ export default function DashboardScreen() {
                 </Mapbox.MarkerView>
               )}
 
-              {/* ✅ TECHNICIANS */}
+              {/* TECHNICIANS */}
               {technicians.map((t) => (
                 <Mapbox.MarkerView
                   key={`tech-${t.id}`}
-                  coordinate={[
-                    t.current_location.longitude,
-                    t.current_location.latitude,
-                  ]}
+                  coordinate={[t.current_location.longitude, t.current_location.latitude]}
                   anchor={{ x: 0.5, y: 0.5 }}
                 >
-                  <View style={styles.marker}>
-                    <Ionicons name="construct" size={22} color="#fff" />
+                  <View>
+                    <Pressable onPress={() => onTechPress(t)}>
+                      <View
+                        style={[
+                          styles.marker,
+                          { backgroundColor: statusColor(t.current_location.status) },
+                        ]}
+                      >
+                        <Ionicons name="construct" size={20} color="#fff" />
+                      </View>
+                    </Pressable>
+
+                    {/* Technician popup */}
+                    {selectedTech?.id === t.id && (
+                      <View
+                        style={{
+                          position: 'absolute',
+                          bottom: 40, // offset above the marker
+                          left: -75, // center horizontally
+                          width: 160,
+                          backgroundColor: '#E0D7FF',
+                          padding: 8,
+                          borderRadius: 8,
+                          elevation: 5,
+                        }}
+                      >
+                        <Text style={{ fontWeight: '700', marginBottom: 4 }}>
+                          {t.technician_name} {/* or t.name if you have it */}
+                        </Text>
+                        <Text>Status: {t.current_location.status}</Text>
+                        <Text>Speed: {t.current_location.speed} km/h</Text>
+
+                        <Pressable
+                          onPress={() => setSelectedTech(null)}
+                          style={{
+                            marginTop: 6,
+                            backgroundColor: '#A855F7',
+                            borderRadius: 6,
+                            paddingVertical: 4,
+                          }}
+                        >
+                          <Text style={{ color: '#fff', textAlign: 'center' }}>Close</Text>
+                        </Pressable>
+                      </View>
+                    )}
                   </View>
                 </Mapbox.MarkerView>
               ))}
             </Mapbox.MapView>
-
+            <View style={styles.statusLegend}>
+              {[
+                { label: 'IDLE', color: '#22C55E' },
+                { label: 'TRAVELING SLOWLY', color: '#F59E0B' },
+                { label: 'IN TRANSIT', color: '#3B82F6' },
+                { label: 'HIGH SPEED', color: '#EF4444' },
+              ].map((status) => (
+                <View key={status.label} style={styles.legendRow}>
+                  <View style={[styles.legendColor, { backgroundColor: status.color }]} />
+                  <Text style={styles.legendLabel}>{status.label}</Text>
+                </View>
+              ))}
+            </View>
             {/* ZOOM CONTROLS */}
             <View style={styles.zoomControls}>
               <Pressable
@@ -316,25 +607,35 @@ export default function DashboardScreen() {
 
 
         <Text style={styles.sectionTitle}>Quick Actions</Text>
-        <View style={styles.quickActions}>
-          {actions.map((a, i) => (
-            <TouchableOpacity key={i} style={styles.actionItem}>
-              <View
-                style={[
-                  styles.actionIcon,
-                  { backgroundColor: a.bg, borderColor: a.color, borderWidth: 2 },
-                ]}
-              >
-                <MaterialCommunityIcons name={a.icon} size={28} color={a.color} />
-              </View>
+<View style={styles.quickActions}>
+  {actions.map((a, i) => (
+    <TouchableOpacity
+      key={i}
+      style={styles.actionItem}
+    onPress={() =>
+  navigation.navigate('Home', {
+    screen: a.screen,
+  })
+}
 
-              <Text style={styles.actionText}>{a.text}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+    >
+      <View
+        style={[
+          styles.actionIcon,
+          { backgroundColor: a.bg, borderColor: a.color, borderWidth: 2 },
+        ]}
+      >
+        <MaterialCommunityIcons name={a.icon} size={28} color={a.color} />
+      </View>
+
+      <Text style={styles.actionText}>{a.text}</Text>
+    </TouchableOpacity>
+  ))}
+</View>
+
 
         {/* Recent Activities */}
-        <Text style={styles.sectionTitle}>Recent Activities</Text>
+        {/* <Text style={styles.sectionTitle}>Recent Activities</Text>
         {activities.map((a, i) => (
           <View key={i} style={styles.activityCard}>
             <View>
@@ -345,7 +646,10 @@ export default function DashboardScreen() {
               <Text style={[styles.statusText, { color: a.color, }]}>{a.status}</Text>
             </View>
           </View>
-        ))}
+        ))} */}
+
+
+
       </ScrollView>
     </View>
   );
@@ -363,7 +667,7 @@ const styles = StyleSheet.create({
   closeBtn: {
     position: 'absolute',
     top: 40,
-    right: 20,
+    left: 20,
     zIndex: 10,
     backgroundColor: '#fff',
     padding: 6,
@@ -383,6 +687,11 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     elevation: 4,
   },
+  centerItem: {
+  width: "100%",
+  alignItems: "center",
+},
+
   userMarker: {
     width: 36,
     height: 36,
@@ -406,53 +715,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFF",
     paddingHorizontal: 16,
-  },
-
-  cardContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-
-  card: {
-    width: "48%",
-    backgroundColor: "#FFF",
-    borderRadius: 4,
-    padding: 14,
-    marginBottom: 12,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-  },
-
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-
-  cardTitle: {
-    fontSize: 14,
-    color: "#101318CC",
-    fontWeight: "600",
-  },
-
-  cardValue: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 2,
-  },
-
-  cardSubText: {
-    fontSize: 12,
-    color: "#101318",
-  },
-
-  percentText: {
-    color: "#009587",
-    fontWeight: "600",
+   
   },
 
   sectionTitle: {
@@ -462,7 +725,6 @@ const styles = StyleSheet.create({
     color: "#101318",
     marginBottom: 20,
   },
-
   quickActions: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -529,7 +791,69 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+     marginTop:10,
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  subtitle: {
+    fontSize: 10,
+    color: '#64748B',
+    marginTop: 4,
+  },
+  bell: {
+    backgroundColor: '#FFFFFF',
+    padding: 10,
+    borderRadius: 12,
+    elevation: 2,
+  },
+grid: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  justifyContent: "space-between",
+},
+statWrapper: {
+  width: "48%",
+  marginBottom: 16,
+},
 
+  card: {
+    width: '48%',
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 10,
+    marginBottom: 14,
+    elevation: 2,
+  },
+
+
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  cardTitle: {
+    fontSize: 13,
+    color: '#475569',
+    fontWeight: '500',
+  },
+  cardValue: {
+    fontSize: 26,
+    fontWeight: '700',
+    marginTop: 12,
+    color: '#0F172A',
+  },
+  iconBox: {
+    padding: 6,
+    borderRadius: 8,
+  },
   mapContainer: {
     width: Dimensions.get("window").width - 32,
     height: 400,
@@ -541,4 +865,140 @@ const styles = StyleSheet.create({
 
 
   markerText: { fontSize: 18 },
+  cards: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 16,
+    marginBottom: 16,
+    elevation: 2,
+  },
+
+  cardTitles: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 14,
+  },
+
+  pipeline: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+
+  pill: {
+    width: '30%',
+    borderRadius: 10,
+    paddingVertical: 10,
+    marginBottom: 12,
+    alignItems: 'center',
+  },
+
+
+  techStatus: {
+    fontSize: 9,
+    color: "#0a0a0aff",
+  },
+  pillValue: {
+    fontWeight: '700',
+    fontSize: 14,
+  },
+
+  pillLabel: {
+    fontSize: 12,
+    marginTop: 4,
+  },
+
+  rows: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+
+  revenueRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 10,
+  },
+
+  revenueLabel: {
+    marginLeft: 8,
+    fontSize: 14,
+  },
+
+  revenueValue: {
+    fontWeight: '700',
+    fontSize: 16,
+  },
+
+  dollar: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+
+  alertHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
+  inProgress: {
+    backgroundColor: '#DBEAFE',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+
+  inProgressText: {
+    fontSize: 12,
+    color: '#2563EB',
+    fontWeight: '600',
+  },
+
+  alertRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+
+  alertLabel: {
+    fontSize: 14,
+  },
+
+  alertBadge: {
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+
+  alertCount: {
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  statusLegend: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    backgroundColor: '#fff',
+    padding: 8,
+    borderRadius: 5,
+    elevation: 5,
+    zIndex: 10,
+  },
+  legendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  legendColor: {
+    width: 16,
+    height: 16,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  legendLabel: {
+    fontSize: 10,
+    fontWeight: '500',
+  },
 });

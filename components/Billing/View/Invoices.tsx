@@ -14,6 +14,8 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 import { api } from "@/src/api/cilent";
+import FilterModal, { AppliedFilter } from "@/components/common/FilterModal";
+import { Ionicons } from "@expo/vector-icons";
 
 
 
@@ -32,6 +34,11 @@ export interface Invoice {
 const Invoices: React.FC = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const [filterVisible, setFilterVisible] = useState(false);
+  const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<'all' | 'recent'>('all');
+  const [recentlyViewedIds, setRecentlyViewedIds] = useState<string[]>([]);
 
   const navigation =
     useNavigation<NativeStackNavigationProp<SearchMenuStackParamList>>();
@@ -78,11 +85,19 @@ const Invoices: React.FC = () => {
   };
 
   const handleInvoiceCardPress = (invoice: Invoice) => {
+    // Navigate
     navigation.navigate("InvoicesForm", {
       mode: "view",
       data: invoice,
     });
+
+    // Track recently viewed
+    setRecentlyViewedIds((prev) => {
+      const updated = [invoice.id, ...prev.filter((id) => id !== invoice.id)];
+      return updated.slice(0, 20); // Keep last 20 viewed invoices
+    });
   };
+
 
 
   const formatDate = (dateStr: string) => {
@@ -96,6 +111,37 @@ const Invoices: React.FC = () => {
     const y = date.getFullYear();
     return `${d}/${m}/${y}`;
   };
+  const handleApplyFilter = (filter: AppliedFilter) => {
+    setAppliedFilter(filter);
+  };
+  const filteredInvoices = appliedFilter
+    ? invoices.filter((inv) => {
+      const fieldValue = (inv as any)[appliedFilter.field];
+      if (!fieldValue) return false;
+
+      switch (appliedFilter.operator) {
+        case 'equals':
+          return String(fieldValue).toLowerCase() === appliedFilter.value.toLowerCase();
+        case 'contains':
+          return String(fieldValue).toLowerCase().includes(appliedFilter.value.toLowerCase());
+        case 'startsWith':
+          return String(fieldValue).toLowerCase().startsWith(appliedFilter.value.toLowerCase());
+        case 'endsWith':
+          return String(fieldValue).toLowerCase().endsWith(appliedFilter.value.toLowerCase());
+        case 'greaterThan':
+          return Number(fieldValue) > Number(appliedFilter.value);
+        case 'lessThan':
+          return Number(fieldValue) < Number(appliedFilter.value);
+        default:
+          return true;
+      }
+    })
+    : invoices;
+
+  const displayedInvoices =
+    viewMode === 'recent'
+      ? filteredInvoices.filter((inv) => recentlyViewedIds.includes(inv.id))
+      : filteredInvoices;
 
   const renderInvoiceCard = ({ item }: { item: Invoice }) => {
     return (
@@ -154,22 +200,58 @@ const Invoices: React.FC = () => {
         title="What services do you need?"
         buttonText="+ New Invoice"
         onButtonClick={handleCreateNewInvoice}
-        onSearchChange={(text) => console.log("Searching Invoices:", text)}
+        onSearchPress={() => setFilterVisible(true)}
+
       />
       <ScrollView style={styles.container}>
-       
-          <Text style={styles.subTitle}>FSM</Text>
-          <Text style={styles.title}>Invoices</Text>
-          <Text style={styles.subtitle}>
-            {loading ? "Loading..." : "Updated just now"}
-          </Text>
-       
+        <View style={styles.headerRow}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.subTitle}>FSM</Text>
+            <Text style={styles.title}>Invoices</Text>
+            <Text style={styles.subtitle}>
+              {loading ? "Loading..." : "Updated just now"}
+            </Text>
+          </View>
+          <View style={{ position: 'relative' }}>
+            <TouchableOpacity
+              style={styles.filterBtn}
+              onPress={() => setDropdownOpen((prev) => !prev)}
+            >
+              <Text style={styles.filterText}>
+                {viewMode === 'all' ? 'All' : 'Recently Viewed'}
+              </Text>
+              <Ionicons name="chevron-down-outline" size={16} color="#444" />
+            </TouchableOpacity>
 
+            {dropdownOpen && (
+              <View style={styles.dropdown}>
+                <TouchableOpacity
+                  style={styles.dropdownItem}
+                  onPress={() => {
+                    setViewMode('all');
+                    setDropdownOpen(false);
+                  }}
+                >
+                  <Text>All</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.dropdownItem}
+                  onPress={() => {
+                    setViewMode('recent');
+                    setDropdownOpen(false);
+                  }}
+                >
+                  <Text>Recently Viewed</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
         <FlatList
-          data={invoices}
+          data={displayedInvoices}
           keyExtractor={(item) => item.id}
           renderItem={renderInvoiceCard}
-         
           ListEmptyComponent={
             !loading ? (
               <Text style={{ textAlign: "center", marginTop: 20 }}>
@@ -178,6 +260,15 @@ const Invoices: React.FC = () => {
             ) : null
           }
         />
+
+
+        <FilterModal
+          visible={filterVisible}
+          module="invoices"
+          onClose={() => setFilterVisible(false)}
+          onApply={handleApplyFilter}
+        />
+
       </ScrollView>
     </View>
 
@@ -195,15 +286,21 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
 
-  subTitle: {
-    color: "#6234E2",
-    fontSize: 12,
-    fontWeight: "600",
-  },
   title: {
     fontSize: 18,
     fontWeight: "700",
     color: "#101318",
+  },
+  sectionHeader: {
+
+    paddingTop: 10,
+    backgroundColor: "#FFF",
+  },
+  subTitle: {
+    flex: 1,
+    color: "#6234E2",
+    fontSize: 12,
+    fontWeight: "600",
   },
   subtitle: {
     fontSize: 13,
@@ -239,5 +336,64 @@ const styles = StyleSheet.create({
   value: {
     color: "#374151",
     fontSize: 13,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    backgroundColor: '#FFF',
+  },
+
+
+
+  filterBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+
+    height: 36,
+    minWidth: 170,
+    paddingHorizontal: 12,
+
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 6,
+    backgroundColor: '#fff',
+  },
+
+
+  filterText: {
+    fontSize: 14,
+    marginRight: 6,
+    color: "#6C3EB5",
+
+    fontWeight: "700",
+  },
+  dropdown: {
+    position: 'absolute',
+    top: 40,
+    right: 0,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    width: 160,
+    zIndex: 999,
+    elevation: 4,
+  },
+
+  dropdownItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+
+
+  dropdownText: {
+    color: "#212121",
+    fontSize: 13,
+    fontWeight: "500",
   },
 });

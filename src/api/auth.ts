@@ -5,6 +5,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { syncDatabase } from '@/database/sync';
 import { database } from '@/database';
 import { FieldWorker, FieldWorkerTrip, UserProfile, Vehicle, VehiclePayload } from '@/types/Worker';
+import { CustomerFeedback } from '@/components/Billing/View/CustomerFeedback';
+import { Payment } from '@/components/Billing/View/Payments';
 
 interface SignupResponse { success: boolean; message?: string }
 
@@ -474,4 +476,120 @@ export const getCurrentUser = async (): Promise<UserProfile> => {
     console.error('getCurrentUser error:', error);
     throw error;
   }
+};
+
+export const customerFeedbackService = {
+  getAll: async (): Promise<CustomerFeedback[]> => {
+    return api.get<CustomerFeedback[]>("/customer_feedback");
+  },
+
+  create: async (payload: {
+    work_order_id?: string;
+    rating: number;
+    comments?: string;
+  }): Promise<CustomerFeedback> => {
+    return api.post<CustomerFeedback>("/customer-feedback", payload);
+  },
+
+  update: async (
+    id: string,
+    payload: {
+      work_order_id?: string;
+      rating: number;
+      comments?: string;
+    }
+  ): Promise<CustomerFeedback> => {
+    return api.put<CustomerFeedback>(`/customer-feedback/${id}`, payload);
+  },
+
+  delete: async (id: string): Promise<{ message: string }> => {
+    return api.delete<{ message: string }>(`/customer-feedback/${id}`);
+  },
+};
+
+export interface CreatePaymentPayload {
+  invoice_id: string;
+  customer_id: string;
+  payment_date: string;
+  amount: number;
+  method: string;
+  reference_number?: string;
+  status: string;
+  notes?: string;
+}
+
+export interface UpdatePaymentPayload {
+  payment_date: string;
+  amount: number;
+  method: string;
+  reference_number?: string;
+  status: string;
+  notes?: string;
+}
+
+// ---- Service ----
+export const paymentService = {
+  // GET all payments
+  getAll: async (): Promise<Payment[]> => {
+    return api.get<Payment[]>("/payments");
+  },
+
+  // GET single payment
+  getById: async (id: string): Promise<Payment> => {
+    return api.get<Payment>(`/payments/${id}`);
+  },
+
+  // CREATE
+  create: async (payload: CreatePaymentPayload): Promise<Payment> => {
+    return api.post<Payment>("/payments", payload);
+  },
+
+  // UPDATE
+  update: async (
+    id: string,
+    payload: UpdatePaymentPayload
+  ): Promise<Payment> => {
+    return api.put<Payment>(`/payments/${id}`, payload);
+  },
+
+  // DELETE
+  delete: async (id: string): Promise<{ message: string }> => {
+    return api.delete<{ message: string }>(`/payments/${id}`);
+  },
+};
+
+export interface Account {
+  id: string;
+  name: string;
+  status: string;
+  type: string;
+  industry: string;
+  credit_limit?: number;
+  total_revenue?: number;
+  customer_rating?: string;
+  created_at?: string;
+  created_by_name?: string;
+  updated_by_name?: string;
+}
+
+export const accountsService = {
+  getAll: async (): Promise<Account[]> => {
+    return api.get<Account[]>("/accounts");
+  },
+
+  getById: async (id: string): Promise<Account> => {
+    return api.get<Account>(`/accounts/${id}`);
+  },
+
+  create: async (payload: Partial<Account>) => {
+    return api.post("/accounts", payload);
+  },
+
+  update: async (id: string, payload: Partial<Account>) => {
+    return api.put(`/accounts/${id}`, payload);
+  },
+
+  delete: async (id: string) => {
+    return api.delete(`/accounts/${id}`);
+  },
 };

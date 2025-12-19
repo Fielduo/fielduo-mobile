@@ -3,13 +3,10 @@ import { Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-
-
-import HomeScreen from '../screens/Home/HomeScreen';
 import ProfileScreen from '../screens/Profile/ProfileScreen';
 import SearchmenuNavigator from './StackNavigator/SearchmenuNavigator';
-import Header from '@/components/common/Header';
 import SearchScreen from '../screens/Search/SearchScreen';
+import DashboardStackNavigator from './StackNavigator/DashboardNavigator';
 
 const Tab = createBottomTabNavigator();
 
@@ -19,9 +16,7 @@ const BottomTabNavigator = () => {
       <Tab.Navigator
         screenOptions={({ route }) => ({
           headerShown: false,
-
           tabBarIcon: ({ focused, color, size }) => {
-
             let iconName: keyof typeof Ionicons.glyphMap = 'home';
 
             switch (route.name) {
@@ -32,7 +27,7 @@ const BottomTabNavigator = () => {
                 iconName = focused ? 'search' : 'search-outline';
                 break;
               case 'Menu':
-                iconName = focused ? 'settings' : 'menu-outline';
+                iconName = focused ? 'menu' : 'menu-outline';
                 break;
               case 'Profile':
                 iconName = focused ? 'person' : 'person-outline';
@@ -41,28 +36,16 @@ const BottomTabNavigator = () => {
 
             return <Ionicons name={iconName} size={size} color={color} />;
           },
-
-
           tabBarActiveTintColor: '#6C63FF',
           tabBarInactiveTintColor: '#999',
-
-          tabBarStyle: {
-            backgroundColor: '#fff',
-            borderTopWidth: 0.4,
-            borderTopColor: '#ccc',
-            height: Platform.OS === 'ios' ? 80 : 60,
-            paddingBottom: Platform.OS === 'ios' ? 20 : 10,
-            paddingTop: 6,
-            elevation: 20,
-          },
-
-          tabBarLabelStyle: {
-            fontSize: 12,
-            marginBottom: 2,
-          },
         })}
       >
-        <Tab.Screen name="Home" component={HomeScreen} />
+        {/* 🔥 Home = Dashboard Stack */}
+        <Tab.Screen
+          name="Home"
+          component={DashboardStackNavigator}
+        />
+
         <Tab.Screen name="Search" component={SearchScreen} />
         <Tab.Screen name="Menu" component={SearchmenuNavigator} />
         <Tab.Screen name="Profile" component={ProfileScreen} />
@@ -70,5 +53,7 @@ const BottomTabNavigator = () => {
     </SafeAreaView>
   );
 };
+
+
 
 export default BottomTabNavigator;

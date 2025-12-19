@@ -13,6 +13,8 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 import { quoteService } from "@/src/api/auth";
+import FilterModal, { AppliedFilter } from "@/components/common/FilterModal";
+import { Ionicons } from "@expo/vector-icons";
 
 
 type NavProp = NativeStackNavigationProp<
@@ -23,6 +25,15 @@ const Quotes = () => {
     const navigation = useNavigation<NavProp>();
     const [quotes, setQuotes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [filterVisible, setFilterVisible] = useState(false);
+    const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(null);
+
+    type ViewMode = "all" | "recent";
+
+const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
+const [viewMode, setViewMode] = useState<ViewMode>("all");
+const [recentQuoteIds, setRecentQuoteIds] = useState<string[]>([]);
+
 
     useEffect(() => {
         loadQuotes();
@@ -51,6 +62,59 @@ const Quotes = () => {
         return `${d}/${m}/${y}`;
     };
 
+    const handleApplyFilter = (filter: AppliedFilter) => {
+        setAppliedFilter(filter);
+        setFilterVisible(false);
+    };
+
+    const filteredQuotes = (() => {
+  let data = [...quotes];
+
+  // 🔹 Recently Viewed filter
+  if (viewMode === "recent") {
+    data = data.filter((q) => recentQuoteIds.includes(q.id));
+  }
+
+  // 🔹 Advanced filter modal
+  if (appliedFilter) {
+    data = data.filter((quote) => {
+      const fieldValue = (quote as any)[appliedFilter.field];
+      if (!fieldValue) return false;
+
+      switch (appliedFilter.operator) {
+        case "equals":
+          return String(fieldValue).toLowerCase() === appliedFilter.value.toLowerCase();
+        case "contains":
+          return String(fieldValue).toLowerCase().includes(appliedFilter.value.toLowerCase());
+        case "startsWith":
+          return String(fieldValue).toLowerCase().startsWith(appliedFilter.value.toLowerCase());
+        case "endsWith":
+          return String(fieldValue).toLowerCase().endsWith(appliedFilter.value.toLowerCase());
+        case "greaterThan":
+          return Number(fieldValue) > Number(appliedFilter.value);
+        case "lessThan":
+          return Number(fieldValue) < Number(appliedFilter.value);
+        default:
+          return true;
+      }
+    });
+  }
+
+  return data;
+})();
+
+
+        const handleQuotePress = (quote: any) => {
+  setRecentQuoteIds((prev: string[]) => {
+    if (prev.includes(quote.id)) return prev;
+    return [quote.id, ...prev].slice(0, 10); // keep last 10
+  });
+
+  navigation.navigate("QuotesForm", {
+    mode: "view",
+    quote: quote,
+  });
+};
 
     return (
         <View style={{ flex: 1, backgroundColor: "#FFF" }}>
@@ -62,27 +126,61 @@ const Quotes = () => {
                 onButtonClick={() =>
                     navigation.navigate("QuotesForm", { mode: "create" })
                 }
-
+                onSearchPress={() => setFilterVisible(true)} //  Open filter modal
             />
 
             <View style={styles.container}>
-                <Text style={styles.sectionLabel}>BILLING</Text>
-                <Text style={styles.title}>Quotes</Text>
-                <Text style={styles.subtitle}>{quotes.length} items</Text>
+                <View style={styles.headerRow}>
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionLabel}>BILLING</Text>
+                        <Text style={styles.title}>Quotes</Text>
+                        <Text style={styles.subtitle}>{quotes.length} items</Text>
+                    </View>
+                    <View style={{ position: 'relative' }}>
+                        <TouchableOpacity
+                            style={styles.filterBtn}
+                            onPress={() => setDropdownOpen((prev) => !prev)}
+                        >
+                            <Text style={styles.filterText}>
+                                {viewMode === 'all' ? 'All' : 'Recently Viewed'}
+                            </Text>
+                            <Ionicons name="chevron-down-outline" size={16} color="#444" />
+                        </TouchableOpacity>
 
+                        {dropdownOpen && (
+                            <View style={styles.dropdown}>
+                                <TouchableOpacity
+                                    style={styles.dropdownItem}
+                                    onPress={() => {
+                                        setViewMode('all');
+                                        setDropdownOpen(false);
+                                    }}
+                                >
+                                    <Text>All</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={styles.dropdownItem}
+                                    onPress={() => {
+                                        setViewMode('recent');
+                                        setDropdownOpen(false);
+                                    }}
+                                >
+                                    <Text>Recently Viewed</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                    </View>
+                </View>
                 {loading ? (
                     <ActivityIndicator size="large" color="#000" />
                 ) : (
                     <ScrollView>
-                        {quotes.map((quote) => (
+                        {filteredQuotes.map((quote) => (
+
                             <TouchableOpacity
-                                key={quote.id}  // ✅ key goes here
-                                onPress={() =>
-                                    navigation.navigate("QuotesForm", {
-                                        mode: "view",
-                                        quote: quote
-                                    })
-                                }
+                                key={quote.id}  //  key goes here
+                                onPress={() => handleQuotePress(quote)}
                             >
                                 <View key={quote.id} style={styles.card}>
                                     <View style={styles.cardInner}>
@@ -136,6 +234,13 @@ const Quotes = () => {
                                 </View>
                             </TouchableOpacity>
                         ))}
+                        <FilterModal
+                            visible={filterVisible}
+                            module="quotes" // Or create a "quotes" config if needed
+                            onClose={() => setFilterVisible(false)}
+                            onApply={handleApplyFilter}
+                        />
+
                     </ScrollView>
                 )}
             </View>
@@ -154,17 +259,74 @@ const LIGHT_GREY = "#F5F5F7";
 const CARD_BORDER = "#545454";
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-    paddingHorizontal: 16,
-    paddingTop: 4,
-  },
+    container: {
+        flex: 1,
+        backgroundColor: "#fff",
+        paddingHorizontal: 16,
+        paddingTop: 4,
+    },
     headerRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "flex-start",
-        marginBottom: 10,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingTop: 10,
+        backgroundColor: '#FFF',
+    },
+
+
+
+    filterBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+
+        height: 36,
+        minWidth: 170,
+        paddingHorizontal: 12,
+
+        borderWidth: 1,
+        borderColor: '#D1D5DB',
+        borderRadius: 6,
+        backgroundColor: '#fff',
+    },
+
+
+    filterText: {
+        fontSize: 14,
+        marginRight: 6,
+        color: "#6C3EB5",
+
+        fontWeight: "700",
+    },
+    dropdown: {
+        position: 'absolute',
+        top: 40,
+        right: 0,
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        borderRadius: 8,
+        width: 160,
+        zIndex: 999,
+        elevation: 4,
+    },
+
+    dropdownItem: {
+        padding: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E5E7EB',
+    },
+
+    sectionHeader: {
+
+        paddingTop: 10,
+        backgroundColor: "#FFF",
+    },
+    dropdownText: {
+        color: "#212121",
+        fontSize: 13,
+        fontWeight: "500",
     },
     sectionLabel: {
         color: PURPLE,

@@ -12,6 +12,8 @@ import HeaderSection from "../../common/HeaderSection";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
+import { customerFeedbackService } from "@/src/api/auth";
+import FilterModal, { AppliedFilter } from "@/components/common/FilterModal";
 
 
 // --- Types ---
@@ -19,19 +21,21 @@ export interface CustomerFeedback {
   id: string;
   organization_name: string;
   work_order_number: string;
-  rating: number; // 1–5
+  rating: number;
   comments?: string;
   submitted_at?: string;
-  created_by: string;
+  created_by_name: string;
   updated_at?: string;
-  updated_by?: string;
+  updated_by_name?: string;
 }
+
 
 // --- Main Component ---
 const CustomerFeedback: React.FC = () => {
   const [feedbacks, setFeedbacks] = useState<CustomerFeedback[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-
+const [filterVisible, setFilterVisible] = useState(false);
+const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(null);
   const navigation =
     useNavigation<NativeStackNavigationProp<SearchMenuStackParamList>>();
 
@@ -42,36 +46,8 @@ const CustomerFeedback: React.FC = () => {
   const fetchFeedbacks = async () => {
     try {
       setLoading(true);
-      // TODO: replace with real API call
-      // const response = await ApiWrapper.get('/customer-feedback');
-      // setFeedbacks(response.data.feedbacks);
-
-      const sample: CustomerFeedback[] = [
-        {
-          id: "1",
-          organization_name: "ABC Corp",
-          work_order_number: "WO-1001",
-          rating: 4,
-          comments: "Service was good and on time.",
-          submitted_at: "2025-11-10",
-          created_by: "John Doe",
-          updated_at: "2025-11-12",
-          updated_by: "Admin User",
-        },
-        {
-          id: "2",
-          organization_name: "XYZ Pvt Ltd",
-          work_order_number: "WO-1002",
-          rating: 5,
-          comments: "Excellent work! Very satisfied.",
-          submitted_at: "2025-11-15",
-          created_by: "Jane Smith",
-          updated_at: "2025-11-16",
-          updated_by: "Supervisor",
-        },
-      ];
-
-      setFeedbacks(sample);
+      const data = await customerFeedbackService.getAll();
+      setFeedbacks(data);
     } catch (error) {
       console.error("Error fetching feedbacks:", error);
       Alert.alert("Error", "Failed to load customer feedback");
@@ -157,42 +133,73 @@ const CustomerFeedback: React.FC = () => {
 
             <View style={styles.col}>
               <Text style={styles.label}>Created By</Text>
-              <Text style={styles.value}>{item.created_by}</Text>
+              <Text style={styles.value}>{item.created_by_name}</Text>
+
             </View>
           </View>
 
           {/* Row 3: Updated At | Updated By */}
           <View style={styles.row}>
-  {/* UPDATED AT */}
-  <View style={styles.col}>
-    <Text style={styles.label}>Updated At</Text>
-    <Text style={styles.value}>
-      {item.updated_at
-        ? new Date(item.updated_at).toLocaleDateString("en-IN")
-        : "-"}
-    </Text>
-  </View>
+            {/* UPDATED AT */}
+            <View style={styles.col}>
+              <Text style={styles.label}>Updated At</Text>
+              <Text style={styles.value}>
+                {item.updated_at
+                  ? new Date(item.updated_at).toLocaleDateString("en-IN")
+                  : "-"}
+              </Text>
+            </View>
 
-  <View style={styles.verticalDivider} />
+            <View style={styles.verticalDivider} />
 
-  {/* UPDATED BY */}
-  <View style={styles.col}>
-    <Text style={styles.label}>Updated By</Text>
-    <Text style={styles.value}>{item.updated_by || "-"}</Text>
-  </View>
+            {/* UPDATED BY */}
+            <View style={styles.col}>
+              <Text style={styles.label}>Updated By</Text>
+              <Text style={styles.value}>{item.updated_by_name || "-"}</Text>
+
+            </View>
 
 
 
-  {/* EMPTY COL TO MATCH 3-COLUMN LAYOUT */}
-  <View style={styles.col}>
-    {/* keep it empty so spacing matches other rows */}
-  </View>
-</View>
+            {/* EMPTY COL TO MATCH 3-COLUMN LAYOUT */}
+            <View style={styles.col}>
+              {/* keep it empty so spacing matches other rows */}
+            </View>
+          </View>
 
         </View>
       </TouchableOpacity>
     );
   };
+
+  const applyLocalFilter = (filter: AppliedFilter) => {
+  const { field, operator, value } = filter;
+
+  const filtered = feedbacks.filter((item: any) => {
+    const fieldValue = item[field];
+
+    if (fieldValue == null) return false;
+
+    switch (operator) {
+      case 'equals':
+        return String(fieldValue).toLowerCase() === value.toLowerCase();
+
+      case 'contains':
+        return String(fieldValue).toLowerCase().includes(value.toLowerCase());
+
+      case 'greater_than':
+        return Number(fieldValue) > Number(value);
+
+      case 'less_than':
+        return Number(fieldValue) < Number(value);
+
+      default:
+        return true;
+    }
+  });
+
+  setFeedbacks(filtered);
+};
 
   return (
     <View style={{ flex: 1, backgroundColor: "#FFF" }}>
@@ -202,7 +209,7 @@ const CustomerFeedback: React.FC = () => {
         title="What services do you need?"
         buttonText="+ New Feedback"
         onButtonClick={handleCreateNewFeedback}
-        onSearchChange={(text) => console.log("Searching Feedback:", text)}
+       onSearchPress={() => setFilterVisible(true)}   //  ADD
       />
 
       {/* Section Header */}
@@ -221,6 +228,16 @@ const CustomerFeedback: React.FC = () => {
         renderItem={renderFeedbackCard}
         contentContainerStyle={{ padding: 12 }}
       />
+      <FilterModal
+  visible={filterVisible}
+  module="customer_feedback"   // ✅ IMPORTANT
+  onClose={() => setFilterVisible(false)}
+  onApply={(filter) => {
+    setAppliedFilter(filter);
+    applyLocalFilter(filter);
+  }}
+/>
+
     </View>
   );
 };

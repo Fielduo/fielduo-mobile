@@ -15,7 +15,7 @@ const Header = () => {
           style={styles.logo}
         />
       </View>
-      <View style={styles.icons}>
+      {/* <View style={styles.icons}>
         <TouchableOpacity style={styles.iconCircle}>
           <Ionicons name="moon-outline" size={20} color="#101318" />
         </TouchableOpacity>
@@ -23,7 +23,7 @@ const Header = () => {
         <TouchableOpacity style={styles.iconCircle}>
           <Ionicons name="notifications-outline" size={20} color="#101318" />
         </TouchableOpacity>
-      </View>
+      </View> */}
     </View>
   );
 };

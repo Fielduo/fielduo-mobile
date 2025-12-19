@@ -207,154 +207,258 @@ const CreateInventoryForm: React.FC = () => {
         <View style={styles.row}>
           <View style={styles.column}>
             <Text style={styles.label}>Item Number</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter item number"
-              value={itemNumber}
-              onChangeText={setItemNumber}
-              editable={!isViewMode}
-            />
+            {isViewMode ? (
+              <View style={styles.readOnlyView}>
+                <Text style={styles.readOnlyText}>{itemNumber || "-"}</Text>
+              </View>
+            ) : (
+              <TextInput
+                style={styles.input}
+                placeholder="Enter item number"
+                value={itemNumber}
+                onChangeText={setItemNumber}
+                editable={!isViewMode}
+              />
+            )}
           </View>
           <View style={styles.column}>
             <Text style={styles.label}>Item Name *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter item name"
-              value={itemName}
-              onChangeText={setItemName}
-              editable={!isViewMode}
-            />
+            {isViewMode ? (
+              <View style={styles.readOnlyView}>
+                <Text style={styles.readOnlyText}>{itemName || "-"}</Text>
+              </View>
+            ) : (
+              <TextInput
+                style={styles.input}
+                placeholder="Enter item name"
+                value={itemName}
+                onChangeText={setItemName}
+                editable={!isViewMode}
+              />
+            )}
           </View>
         </View>
 
         <Text style={styles.label}>Item Description</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Enter description"
-          value={description}
-          onChangeText={setDescription}
-          editable={!isViewMode}
-          multiline
-        />
-
+        {isViewMode ? (
+          <View style={styles.readOnlyView}>
+            <Text style={styles.readOnlyText}>{description || "-"}</Text>
+          </View>
+        ) : (
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            placeholder="Enter description"
+            value={description}
+            onChangeText={setDescription}
+            editable={!isViewMode}
+            multiline
+          />
+        )}
         <View style={styles.row}>
           <View style={styles.column}>
             <Text style={styles.label}>Category</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter category"
-              value={category}
-              onChangeText={setCategory}
-              editable={!isViewMode}
-            />
+            {isViewMode ? (
+              <View style={styles.readOnlyView}>
+                <Text style={styles.readOnlyText}>{category || "-"}</Text>
+              </View>
+            ) : (
+              <TextInput
+                style={styles.input}
+                placeholder="Enter category"
+                value={category}
+                onChangeText={setCategory}
+                editable={!isViewMode}
+              />
+            )}
           </View>
           <View style={styles.column}>
             <Text style={styles.label}>Subcategory</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter subcategory"
-              value={subcategory}          // ✅ state bind
-              onChangeText={setSubcategory} //
-              editable={!isViewMode}
-            />
+            {isViewMode ? (
+              <View style={styles.readOnlyView}>
+                <Text style={styles.readOnlyText}>{subcategory || "-"}</Text>
+              </View>
+            ) : (
+              <TextInput
+                style={styles.input}
+                placeholder="Enter subcategory"
+                value={subcategory}          // ✅ state bind
+                onChangeText={setSubcategory} //
+                editable={!isViewMode}
+              />
+            )}
           </View>
         </View>
 
         <Text style={styles.label}>Unit of Measure</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. pcs/box"
-          onChangeText={setUnitOfMeasure} // ✅ update state
-          value={unitOfMeasure}         // ✅ state bind
-          editable={!isViewMode}
-        />
-
+        {isViewMode ? (
+          <View style={styles.readOnlyView}>
+            <Text style={styles.readOnlyText}>{unitOfMeasure || "-"}</Text>
+          </View>
+        ) : (
+          <TextInput
+            style={styles.input}
+            placeholder="e.g. pcs/box"
+            onChangeText={setUnitOfMeasure} // ✅ update state
+            value={unitOfMeasure}         // ✅ state bind
+            editable={!isViewMode}
+          />
+        )}
         {/* PRICING & STOCK */}
         <Text style={styles.sectionHeader}>PRICING & STOCK</Text>
         <View style={styles.row}>
-          <NumericInput label="Cost (₹)" value={cost} onChange={setCost} />
-          <NumericInput label="Price (₹)" value={price} onChange={setPrice} />
+          {isViewMode ? (
+            <View style={styles.readOnlyView}>
+              <Text style={styles.label}>Cost (₹)</Text>
+              <Text style={styles.readOnlyText}>
+                {cost || "-"}
+              </Text>
+            </View>
+          ) : (
+            <NumericInput label="Cost (₹)" value={cost} onChange={setCost} />
+          )}
+          {isViewMode ? (
+            <View style={styles.readOnlyView}>
+              <Text style={styles.label}>Price (₹)</Text>
+              <Text style={styles.readOnlyText}>
+                {price || "-"}
+              </Text>
+            </View>
+          ) : (
+            <NumericInput label="Price (₹)" value={price} onChange={setPrice} />
+          )}
         </View>
 
         <View style={styles.row}>
-          <NumericInput
-            label="Stock Quantity"
-            value={stockQty}
-            onChange={setStockQty}
-            editable={!isViewMode}
+          {isViewMode ? (
+            <View style={styles.readOnlyView}>
+              <Text style={styles.label}>Stock Quantity</Text>
+              <Text style={styles.readOnlyText}>
+                {stockQty || "-"}
+              </Text>
+            </View>
+          ) : (
+            <NumericInput
+              label="Stock Quantity"
+              value={stockQty}
+              onChange={setStockQty}
+              editable={!isViewMode}
 
-          />
-          <NumericInput
-            label="Min Stock"
-            value={minStock}
-            onChange={setMinStock}
-            editable={!isViewMode}
-          />
+            />
+          )}
+          {isViewMode ? (
+            <View style={styles.readOnlyView}>
+              <Text style={styles.label}>Min Stock</Text>
+              <Text style={styles.readOnlyText}>
+                {minStock || "-"}
+              </Text>
+            </View>
+          ) : (
+            <NumericInput
+              label="Min Stock"
+              value={minStock}
+              onChange={setMinStock}
+              editable={!isViewMode}
+            />
+          )}
         </View>
 
         <View style={styles.row}>
-          <NumericInput
-            label="Max Stock"
-            value={maxStock}
-            onChange={setMaxStock}
-            editable={!isViewMode}
-          />
-          <NumericInput
-            label="Reorder Point"
-            value={reorderPoint}
-            onChange={setReorderPoint}
-            editable={!isViewMode}
-          />
+          {isViewMode ? (
+            <View style={styles.readOnlyView}>
+              <Text style={styles.label}>Max Stock</Text>
+              <Text style={styles.readOnlyText}>
+                {maxStock || "-"}
+              </Text>
+            </View>
+          ) : (
+            <NumericInput
+              label="Max Stock"
+              value={maxStock}
+              onChange={setMaxStock}
+              editable={!isViewMode}
+            />
+          )}
+
+          {isViewMode ? (
+            <View style={styles.readOnlyView}>
+              <Text style={styles.label}>Reorder Point</Text>
+              <Text style={styles.readOnlyText}>
+                {reorderPoint || "-"}
+              </Text>
+            </View>
+          ) : (
+            <NumericInput
+              label="Reorder Point"
+              value={reorderPoint}
+              onChange={setReorderPoint}
+              editable={!isViewMode}
+            />
+          )}
         </View>
 
         <Text style={styles.label}>Supplier ID</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter supplier ID"
-          keyboardType="numeric"
-          value={supplierId}               // ✅ string
-          onChangeText={setSupplierId}     // ✅ (text: string) => void
-          editable={!isViewMode}
-        />
-
+        {isViewMode ? (
+          <View style={styles.readOnlyView}>
+            <Text style={styles.readOnlyText}>{supplierId || "-"}</Text>
+          </View>
+        ) : (
+          <TextInput
+            style={styles.input}
+            placeholder="Enter supplier ID"
+            keyboardType="numeric"
+            value={supplierId}               // ✅ string
+            onChangeText={setSupplierId}     // ✅ (text: string) => void
+            editable={!isViewMode}
+          />
+        )}
         {/* WAREHOUSE & LOCATION */}
         <Text style={styles.sectionHeader}>WAREHOUSE & LOCATION</Text>
         <Text style={styles.label}>Warehouse Location</Text>
-        <TextInput style={styles.input}
-          placeholder="Enter warehouse location"
-          value={warehouseLocation}
-          onChangeText={setWarehouseLocation}
-          editable={!isViewMode}
-        />
-
+        {isViewMode ? (
+          <View style={styles.readOnlyView}>
+            <Text style={styles.readOnlyText}>{warehouseLocation || "-"}</Text>
+          </View>
+        ) : (
+          <TextInput style={styles.input}
+            placeholder="Enter warehouse location"
+            value={warehouseLocation}
+            onChangeText={setWarehouseLocation}
+            editable={!isViewMode}
+          />
+        )}
         <Text style={styles.label}>Bin Location</Text>
-        <TextInput style={styles.input}
-          placeholder="Enter bin location"
-          value={binLocation}
-          onChangeText={setBinLocation}
-          editable={!isViewMode}
-        />
+        {isViewMode ? (
+          <View style={styles.readOnlyView}>
+            <Text style={styles.readOnlyText}>{binLocation || "-"}</Text>
+          </View>
+        ) : (
+          <TextInput style={styles.input}
+            placeholder="Enter bin location"
+            value={binLocation}
+            onChangeText={setBinLocation}
+            editable={!isViewMode}
+          />)}
 
         {/* TRACKING & ADDITIONAL INFO */}
         <Text style={styles.sectionHeader}>TRACKING & ADDITIONAL INFO</Text>
 
         <View style={styles.checkboxRow}>
           <View style={styles.checkboxColumn}>
-  <Checkbox
-  value={serialTracked}
-  onValueChange={setSerialTracked}
-  color={serialTracked ? "#6A1B9A" : undefined}
-/>
+            <Checkbox
+              value={serialTracked}
+              onValueChange={setSerialTracked}
+              color={serialTracked ? "#6A1B9A" : undefined}
+            />
 
             <Text style={styles.checkboxLabel}>Serial Tracked</Text>
           </View>
 
           <View style={styles.checkboxColumn}>
-         <Checkbox
-  value={lotTracked}
-  onValueChange={setLotTracked}
-  color={lotTracked ? "#6A1B9A" : undefined}
-/>
+            <Checkbox
+              value={lotTracked}
+              onValueChange={setLotTracked}
+              color={lotTracked ? "#6A1B9A" : undefined}
+            />
             <Text style={styles.checkboxLabel}>Lot Tracked</Text>
           </View>
         </View>
@@ -362,20 +466,35 @@ const CreateInventoryForm: React.FC = () => {
         <View style={styles.row}>
           <View style={styles.column}>
             <Text style={styles.label}>Barcode</Text>
-            <TextInput style={styles.input}
-              placeholder="Enter barcode"
-              value={barcode}
-              onChangeText={setBarcode}
-              editable={!isViewMode}
-            />
+            {isViewMode ? (
+              <View style={styles.readOnlyView}>
+                <Text style={styles.readOnlyText}>{barcode || "-"}</Text>
+              </View>
+            ) : (
+              <TextInput style={styles.input}
+                placeholder="Enter barcode"
+                value={barcode}
+                onChangeText={setBarcode}
+                editable={!isViewMode}
+              />
+            )}
           </View>
           <View style={styles.column}>
-            <NumericInput
-              label="Weight (kg)"
-              value={weight}
-              onChange={setWeight}
-              editable={!isViewMode}
-            />
+            {isViewMode ? (
+              <View style={styles.readOnlyView}>
+                <Text style={styles.label}>Weight (kg)</Text>
+                <Text style={styles.readOnlyText}>
+                  {weight || "-"}
+                </Text>
+              </View>
+            ) : (
+              <NumericInput
+                label="Weight (kg)"
+                value={weight}
+                onChange={setWeight}
+                editable={!isViewMode}
+              />
+            )}
           </View>
         </View>
 
@@ -383,79 +502,111 @@ const CreateInventoryForm: React.FC = () => {
           {/* Dimensions Field */}
           <View style={styles.column}>
             <Text style={styles.label}>Dimensions (L × W × H)</Text>
-            <TextInput style={styles.input}
-              placeholder="0 × 0 × 0"
-              value={dimensions}
-              onChangeText={setDimensions}
-              editable={!isViewMode}
-            />
+            {isViewMode ? (
+              <View style={styles.readOnlyView}>
+                <Text style={styles.readOnlyText}>{dimensions || "-"}</Text>
+              </View>
+            ) : (
+              <TextInput style={styles.input}
+                placeholder="0 × 0 × 0"
+                value={dimensions}
+                onChangeText={setDimensions}
+                editable={!isViewMode}
+              />
+            )}
           </View>
 
           {/* Expiry Date Field */}
           <View style={styles.column}>
             <Text style={styles.label}>Expiry Date</Text>
-            <TouchableOpacity onPress={() => setShowExpiry(true)}>
-              <View style={styles.inputContainer}>
-                <TextInput
-                  placeholder="Select date"
-                  editable={false}
-                  value={expiryDate ? expiryDate.toDateString() : ""}
 
-                />
-                <Ionicons
-                  name="calendar-outline"
-                  size={18}
-                  color="#777"
-                  style={styles.iconRight}
-                />
+            {isViewMode ? (
+              /* 🔹 VIEW MODE */
+              <View style={styles.readOnlyView}>
+                <Text style={styles.readOnlyText}>
+                  {expiryDate ? expiryDate.toDateString() : "-"}
+                </Text>
               </View>
-            </TouchableOpacity>
+            ) : (
+              /* 🔹 CREATE / EDIT MODE */
+              <>
+                <TouchableOpacity onPress={() => setShowExpiry(true)}>
+                  <View style={styles.inputContainer}>
+                    <TextInput
+                      placeholder="Select date"
+                      editable={false}
+                      value={expiryDate ? expiryDate.toDateString() : ""}
+                    />
+                    <Ionicons
+                      name="calendar-outline"
+                      size={18}
+                      color="#777"
+                      style={styles.iconRight}
+                    />
+                  </View>
+                </TouchableOpacity>
 
-            {showExpiry && (
-              <DateTimePicker
-                value={expiryDate || new Date()}
-                mode="date"
-                display={Platform.OS === "ios" ? "spinner" : "calendar"}
-                onChange={(e, date) => {
-                  setShowExpiry(false);
-                  if (date) setExpiryDate(date);
-                }}
-              />
+                {showExpiry && (
+                  <DateTimePicker
+                    value={expiryDate || new Date()}
+                    mode="date"
+                    display={Platform.OS === "ios" ? "spinner" : "calendar"}
+                    onChange={(e, date) => {
+                      setShowExpiry(false);
+                      if (date) setExpiryDate(date);
+                    }}
+                  />
+                )}
+              </>
             )}
           </View>
+
         </View>
 
         <View style={styles.row}>
           <View style={styles.column}>
             <Text style={styles.label}>Image URL</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Upload or paste link"
-              value={imageUrl}
-              onChangeText={setImageUrl}
-              editable={!isViewMode}
+            {isViewMode ? (
+              <View style={styles.readOnlyView}>
+                <Text style={styles.readOnlyText}>{imageUrl || "-"}</Text>
+              </View>
+            ) : (
+              <TextInput
+                style={styles.input}
+                placeholder="Upload or paste link"
+                value={imageUrl}
+                onChangeText={setImageUrl}
+                editable={!isViewMode}
 
-            />
+              />
+            )}
           </View>
 
           <View style={styles.column}>
             <Text style={styles.label}>Status</Text>
-            <View
-              style={[styles.pickerContainer, isViewMode && styles.disabledPicker]}
-            >
-              <Picker
-                enabled={!isViewMode}
-                selectedValue={status}
-                onValueChange={setStatus}
+            {isViewMode ? (
+              <View style={styles.readOnlyView}>
+                <Text style={styles.readOnlyText}>{status || "-"}</Text>
+              </View>
+            ) : (
+              <View
+                style={[styles.pickerContainer, isViewMode && styles.disabledPicker]}
               >
-                <Picker.Item label="Select status" value="" />
-                <Picker.Item label="Active" value="active" />
-                <Picker.Item label="Inactive" value="inactive" />
-                <Picker.Item label="Repair" value="repair" />
-                <Picker.Item label="Retired" value="retired" />
-              </Picker>
-            </View>
+                <Picker
+                  enabled={!isViewMode}
+                  selectedValue={status}
+                  onValueChange={setStatus}
+                >
+                  <Picker.Item label="Select status" value="" />
+                  <Picker.Item label="Active" value="active" />
+                  <Picker.Item label="Inactive" value="inactive" />
+                  <Picker.Item label="Repair" value="repair" />
+                  <Picker.Item label="Retired" value="retired" />
+                </Picker>
+              </View>
+            )}
           </View>
+
         </View>
 
         {/* BUTTONS */}
@@ -625,6 +776,22 @@ const styles = StyleSheet.create({
   },
   buttonText: { color: "#fff", fontWeight: "600" },
   cancelText: { color: "#fff", fontWeight: "600" },
+  readOnlyInput: {
 
+    paddingHorizontal: 12,
+    paddingVertical: 14,
+    fontSize: 12,
+    color: "#101318CC",
+
+  },
+  readOnlyView: {
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+
+  },
+  readOnlyText: {
+    fontSize: 12,
+    color: "#101318CC",
+  },
 
 });

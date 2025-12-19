@@ -14,6 +14,8 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 import { getTrips } from "@/src/api/auth";
+import FilterModal, { AppliedFilter } from "@/components/common/FilterModal";
+import { Ionicons } from "@expo/vector-icons";
 
 interface FieldWorkerTrip {
   id: string;
@@ -34,19 +36,26 @@ export default function FieldWorkerTrip() {
 
   const [trips, setTrips] = useState<FieldWorkerTrip[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filterVisible, setFilterVisible] = useState(false);
+  const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(null);
+  //  Add dropdown & viewMode states
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'all' | 'recent'>('all');
 
-  // ✅ Fetch trips on screen load
+  //  Keep track of recently viewed trips
+  const [recentTripIds, setRecentTripIds] = useState<string[]>([]);
+  //  Fetch trips on screen load
   useEffect(() => {
     const fetchData = async () => {
       try {
         const data = await getTrips();
         const mappedTrips: FieldWorkerTrip[] = (data || []).map(trip => ({
           id: trip.id,
-          user_id: trip.user_id,               // ✅ add this
+          user_id: trip.user_id,               //  add this
           user_name: trip.user_name,
-          work_order_id: trip.work_order_id,   // ✅ add this
+          work_order_id: trip.work_order_id,   //  add this
           work_order_name: trip.work_order_name,
-          vehicle_id: trip.vehicle_id,         // ✅ add this
+          vehicle_id: trip.vehicle_id,         //  add this
           vehicle_name: trip.vehicle_name,
           started_at: trip.started_at ?? "",   // Ensure string
           ended_at: trip.ended_at ?? "",       // Ensure string
@@ -64,12 +73,7 @@ export default function FieldWorkerTrip() {
   }, []);
 
 
-  const handleCardPress = (trip: FieldWorkerTrip) => {
-    navigation.navigate("CreateFieldWorkerTrip", {
-      mode: "view",
-      trip, // Pass the full trip object
-    });
-  };
+
 
 
   const handleCreateNew = () => {
@@ -112,7 +116,31 @@ export default function FieldWorkerTrip() {
       </View>
     </TouchableOpacity>
   );
+const handleCardPress = (trip: FieldWorkerTrip) => {
+    // Add this trip to recently viewed
+    setRecentTripIds(prev => {
+      const newList = [trip.id, ...prev.filter(id => id !== trip.id)];
+      return newList.slice(0, 20); // Keep last 20 viewed trips
+    });
 
+    navigation.navigate("CreateFieldWorkerTrip", {
+      mode: "view",
+      trip,
+    });
+  };
+
+  const filteredTrips = trips
+    .filter((trip) => {
+      if (!appliedFilter || !appliedFilter.field) return true;
+      const rawValue = trip[appliedFilter.field as keyof FieldWorkerTrip];
+      if (!rawValue) return false;
+      return rawValue.toString().toLowerCase().includes(appliedFilter.value.toLowerCase());
+    })
+    .filter(trip => {
+      if (viewMode === 'all') return true;
+      if (viewMode === 'recent') return recentTripIds.includes(trip.id);
+      return true;
+    });
   return (
     <View style={{ flex: 1, backgroundColor: "#FFF" }}>
       <Header />
@@ -120,43 +148,89 @@ export default function FieldWorkerTrip() {
         title="What services do you need?"
         buttonText="+ New Trip"
         onButtonClick={handleCreateNew}
-        onSearchChange={(text) => console.log("Searching:", text)}
+        onSearchPress={() => setFilterVisible(true)} //  Open filter modal
       />
+      <View style={styles.headerRow}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.subTitle}>FSM</Text>
+          <Text style={styles.title}>Field Worker Trip</Text>
 
-      <View style={styles.sectionHeader}>
-        <Text style={styles.subTitle}>FSM</Text>
-        <Text style={styles.title}>Field Worker Trip</Text>
+          {/* ✅ Items count & last updated */}
+          {!loading && (
+            <Text style={styles.metaText}>
+              {trips.length} {trips.length === 1 ? "item" : "items"} • Updated just now
+            </Text>
+          )}
+        </View>
+        {/*  RIGHT SIDE */}
+        <View style={{ position: 'relative' }}>
+          <TouchableOpacity
+            style={styles.filterBtn}
+            onPress={() => setDropdownOpen((prev) => !prev)}
+          >
+            <Text style={styles.filterText}>
+              {viewMode === 'all' ? 'All' : 'Recently Viewed'}
+            </Text>
+            <Ionicons name="chevron-down-outline" size={16} color="#444" />
+          </TouchableOpacity>
 
-        {/* ✅ Items count & last updated */}
-        {!loading && (
-          <Text style={styles.metaText}>
-            {trips.length} {trips.length === 1 ? "item" : "items"} • Updated just now
-          </Text>
-        )}
+          {dropdownOpen && (
+            <View style={styles.dropdown}>
+              <TouchableOpacity
+                style={styles.dropdownItem}
+                onPress={() => {
+                  setViewMode('all');
+                  setDropdownOpen(false);
+                }}
+              >
+                <Text>All</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.dropdownItem}
+                onPress={() => {
+                  setViewMode('recent');
+                  setDropdownOpen(false);
+                }}
+              >
+                <Text>Recently Viewed</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       </View>
-
-      {/* 🔹 Loading State */}
+      {/*  Loading State */}
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color="#6C63FF" />
           <Text> Fetching trips...</Text>
         </View>
       ) : trips.length === 0 ? (
-        // 🔹 Empty State
+        //  Empty State
         <View style={styles.center}>
           <Text style={styles.emptyText}>
             No trips found. Click “New Trip” to create one.
           </Text>
         </View>
       ) : (
-        // 🔹 Data List
+        //  Data List
         <FlatList
-          data={trips}
+          data={filteredTrips}
           keyExtractor={(item, index) => item.id || String(index)}
           renderItem={renderTripCard}
           contentContainerStyle={{ padding: 12 }}
         />
       )}
+      <FilterModal
+        visible={filterVisible}
+        module="field_worker_trips"
+        onClose={() => setFilterVisible(false)}
+        onApply={(filter) => {
+          setAppliedFilter(filter);
+          setFilterVisible(false);
+        }}
+      />
+
     </View>
   );
 }
@@ -204,5 +278,64 @@ const styles = StyleSheet.create({
     color: "#444",
     textAlign: "center",
     marginBottom: 20,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    backgroundColor: '#FFF',
+  },
+
+
+
+  filterBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+
+    height: 36,
+    minWidth: 170,
+    paddingHorizontal: 12,
+
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 6,
+    backgroundColor: '#fff',
+  },
+
+
+  filterText: {
+    fontSize: 14,
+    marginRight: 6,
+    color: "#6C3EB5",
+
+    fontWeight: "700",
+  },
+  dropdown: {
+    position: 'absolute',
+    top: 40,
+    right: 0,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    width: 160,
+    zIndex: 999,
+    elevation: 4,
+  },
+
+  dropdownItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+
+
+  dropdownText: {
+    color: "#212121",
+    fontSize: 13,
+    fontWeight: "500",
   },
 });

@@ -13,11 +13,14 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 import { workCompletionService } from "@/src/api/auth";
+import FilterModal, { AppliedFilter } from "@/components/common/FilterModal";
 
 
 export default function WorkCompletion() {
   const [workData, setWorkData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+const [filterVisible, setFilterVisible] = useState(false);
+const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(null);
 
   const navigation =
     useNavigation<NativeStackNavigationProp<SearchMenuStackParamList>>();
@@ -57,18 +60,27 @@ export default function WorkCompletion() {
       </View>
     );
   }
+const filteredWorkData = workData.filter((item) => {
+  if (!appliedFilter || !appliedFilter.field) return true;
+
+  const rawValue = item[appliedFilter.field as keyof typeof item];
+  if (!rawValue) return false;
+
+  return rawValue.toString().toLowerCase().includes(appliedFilter.value.toLowerCase());
+});
 
   return (
     <View style={styles.wrapper}>
       <Header />
       <HeaderSection
-        title="Work Completion Statuses"
-        buttonText="+ New Status"
-        onButtonClick={() =>
-          navigation.navigate("WorkCompletionForm", { mode: "create" })
-        }
-        onSearchChange={(text) => console.log("Searching:", text)}
-      />
+  title="Work Completion Statuses"
+  buttonText="+ New Status"
+  onButtonClick={() =>
+    navigation.navigate("WorkCompletionForm", { mode: "create" })
+  }
+  onSearchPress={() => setFilterVisible(true)} // open filter modal
+/>
+
 
       <ScrollView style={styles.container}>
         <Text style={styles.sectionLabel}>FSM</Text>
@@ -78,10 +90,10 @@ export default function WorkCompletion() {
           {workData.length} statuses — Updated just now
         </Text>
 
-        {workData.length === 0 ? (
-          <Text style={styles.noDataText}>No work completion records found.</Text>
-        ) : (
-          workData.map((item, index) => {
+      {filteredWorkData.length === 0 ? (
+  <Text style={styles.noDataText}>No work completion records found.</Text>
+) : (
+  filteredWorkData.map((item, index) => {
             const colors = getStatusColor(item.status || "Unknown");
             return (
               <TouchableOpacity
@@ -145,6 +157,16 @@ export default function WorkCompletion() {
             );
           })
         )}
+        <FilterModal
+  visible={filterVisible}
+  module="work_completion" // relevant module for work completion
+  onClose={() => setFilterVisible(false)}
+  onApply={(filter) => {
+    setAppliedFilter(filter);
+    setFilterVisible(false);
+  }}
+/>
+
       </ScrollView>
     </View>
   );

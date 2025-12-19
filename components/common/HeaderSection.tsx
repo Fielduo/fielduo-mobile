@@ -6,49 +6,51 @@ interface HeaderSectionProps {
   title: string;
   buttonText: string;
   onButtonClick?: () => void;
-  onSearchChange?: (text: string) => void;
-  currentScreen?: string; // 👈 new prop to identify screen
+  onSearchPress?: () => void;   // ✅ ONLY this
+  currentScreen?: string;
 }
 
 const HeaderSection: React.FC<HeaderSectionProps> = ({
   title,
   buttonText,
   onButtonClick,
-  onSearchChange,
-  currentScreen, // 👈 using here
+  onSearchPress,     // ✅ FIXED (was onSearchChange ❌)
+  currentScreen,
 }) => {
-  // 👇 Hide the header row only for Dashboard & SearchMenu
-  const hideHeader = currentScreen === 'DashboardScreen' || currentScreen === 'SearchMenu';
+  const hideHeader =
+    currentScreen === 'DashboardScreen' ||
+    currentScreen === 'SearchMenu';
 
   return (
     <View style={styles.container}>
       {/* 🔹 Header Row */}
-      {!hideHeader && ( // 👈 conditionally render
+      {!hideHeader && (
         <View style={styles.headerRow}>
           <Text style={styles.title}>{title}</Text>
 
-          {/* 🔹 Gradient Button */}
           <TouchableOpacity onPress={onButtonClick} activeOpacity={0.8}>
             <LinearGradient
               colors={['#6234E2', '#DF34E2']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              style={styles.gradientButton}>
+              style={styles.gradientButton}
+            >
               <Text style={styles.buttonText}>{buttonText}</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
       )}
 
-      {/* 🔍 Search Input */}
-      <View style={styles.searchContainer}>
+      {/* 🔍 Search Input (CLICK ONLY) */}
+      <TouchableOpacity activeOpacity={1} onPress={onSearchPress}>
         <TextInput
           placeholder="Search..."
           placeholderTextColor="#9CA3AF"
           style={styles.input}
-          onChangeText={onSearchChange}
+          editable={false}       // ✅ no typing
+          pointerEvents="none"   // ✅ click passes to TouchableOpacity
         />
-      </View>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -80,10 +82,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 14,
-    textAlign: 'center',
-  },
-  searchContainer: {
-    marginBottom: 12,
   },
   input: {
     borderWidth: 1,
