@@ -7,11 +7,12 @@
     "icon": "./assets/images/icon.png",
     "scheme": "fielduomobile",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./assets/images/Splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
+  "splash": {
+  "image": "./assets/images/Spalsh.png",
+  "resizeMode": "contain",
+  "backgroundColor": "#ffffff"
+},
+
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.santhiyak.fielduomobile",

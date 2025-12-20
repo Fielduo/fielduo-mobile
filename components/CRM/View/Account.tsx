@@ -14,6 +14,12 @@ export default function AccountsScreen() {
     const [loading, setLoading] = useState(false);
     const [filterVisible, setFilterVisible] = useState(false);
     const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(null);
+type ViewMode = 'all' | 'recent';
+
+const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
+const [viewMode, setViewMode] = useState<ViewMode>('all');
+const [recentViewedIds, setRecentViewedIds] = useState<string[]>([]);
+
 
 
     const fetchAccounts = async () => {
@@ -36,37 +42,39 @@ export default function AccountsScreen() {
         setAppliedFilter(filter);
     };
 
-    const filteredAccounts = React.useMemo(() => {
-        if (!appliedFilter) return accounts;
+ const filteredAccounts = React.useMemo(() => {
+  let data = accounts;
 
-        const { field, operator, value } = appliedFilter;
+  // 🔹 Recent view filter
+  if (viewMode === 'recent') {
+    data = data.filter((acc) => recentViewedIds.includes(acc.id));
+  }
 
-        return accounts.filter((acc: any) => {
-            const fieldValue = acc[field];
+  // 🔹 Advanced filter modal
+  if (!appliedFilter) return data;
 
-            if (fieldValue == null) return false;
+  const { field, operator, value } = appliedFilter;
 
-            switch (operator) {
-                case 'contains':
-                    return String(fieldValue).toLowerCase().includes(value.toLowerCase());
+  return data.filter((acc: any) => {
+    const fieldValue = acc[field];
+    if (fieldValue == null) return false;
 
-                case 'equals':
-                    return String(fieldValue).toLowerCase() === value.toLowerCase();
-
-                case 'starts_with':
-                    return String(fieldValue).toLowerCase().startsWith(value.toLowerCase());
-
-                case 'greater_than':
-                    return Number(fieldValue) > Number(value);
-
-                case 'less_than':
-                    return Number(fieldValue) < Number(value);
-
-                default:
-                    return true;
-            }
-        });
-    }, [accounts, appliedFilter]);
+    switch (operator) {
+      case 'contains':
+        return String(fieldValue).toLowerCase().includes(value.toLowerCase());
+      case 'equals':
+        return String(fieldValue).toLowerCase() === value.toLowerCase();
+      case 'starts_with':
+        return String(fieldValue).toLowerCase().startsWith(value.toLowerCase());
+      case 'greater_than':
+        return Number(fieldValue) > Number(value);
+      case 'less_than':
+        return Number(fieldValue) < Number(value);
+      default:
+        return true;
+    }
+  });
+}, [accounts, appliedFilter, viewMode, recentViewedIds]);
 
     return (
         <View style={{ flex: 1, backgroundColor: "#FFF" }}>
@@ -91,10 +99,42 @@ export default function AccountsScreen() {
                         <Text style={styles.subTitle}> Updated just now</Text>
                     </View>
 
-                    <TouchableOpacity style={styles.filterBtn}>
-                        <Text style={styles.filterText}>Recently Viewed</Text>
-                        <Ionicons name="chevron-down-outline" size={16} color="#444" />
-                    </TouchableOpacity>
+               
+                                   <View style={{ position: 'relative' }}>
+                                       <TouchableOpacity
+                                           style={styles.filterBtn}
+                                           onPress={() => setDropdownOpen((p) => !p)}
+                                       >
+                                           <Text style={styles.filterText}>
+                                               {viewMode === 'all' ? 'All' : 'Recently Viewed'}
+                                           </Text>
+                                           <Ionicons name="chevron-down-outline" size={16} color="#444" />
+                                       </TouchableOpacity>
+               
+                                       {dropdownOpen && (
+                                           <View style={styles.dropdown}>
+                                               <TouchableOpacity
+                                                   style={styles.dropdownItem}
+                                                   onPress={() => {
+                                                       setViewMode('all');
+                                                       setDropdownOpen(false);
+                                                   }}
+                                               >
+                                                   <Text>All</Text>
+                                               </TouchableOpacity>
+               
+                                               <TouchableOpacity
+                                                   style={styles.dropdownItem}
+                                                   onPress={() => {
+                                                       setViewMode('recent');
+                                                       setDropdownOpen(false);
+                                                   }}
+                                               >
+                                                   <Text>Recently Viewed</Text>
+                                               </TouchableOpacity>
+                                           </View>
+                                       )}
+                                   </View>
                 </View>
 
                 {/* Cards */}
@@ -102,7 +142,19 @@ export default function AccountsScreen() {
                     <ActivityIndicator size="large" color="#6234E2" />
                 ) : (
                     filteredAccounts.map((acc, i) => (
-                        <View key={acc.id} style={[styles.card, { borderLeftColor: "#6234E2" }]}>
+                       <TouchableOpacity
+  key={acc.id}
+  activeOpacity={0.85}
+  onPress={() => {
+    setRecentViewedIds((prev) =>
+      prev.includes(acc.id)
+        ? prev
+        : [acc.id, ...prev].slice(0, 10)
+    );
+  }}
+>
+  <View style={[styles.card, { borderLeftColor: "#6234E2" }]}>
+
 
                             {/* Row 1 */}
                             <View style={styles.row}>
@@ -156,6 +208,7 @@ export default function AccountsScreen() {
                             </View>
 
                         </View>
+                        </TouchableOpacity>
                     ))
                 )}
 <FilterModal
@@ -227,22 +280,53 @@ const styles = StyleSheet.create({
     },
 
     filterBtn: {
-        flexDirection: "row",
-        alignItems: "center",
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderWidth: 1,
-        borderColor: "#D1D5DB",
-        borderRadius: 8,
-    },
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
 
-    filterText: {
-        fontSize: 14,
-        marginRight: 6,
-        color: "#6C3EB5",
+  height: 36,
+  minWidth: 170,
+  paddingHorizontal: 12,
 
-        fontWeight: "700",
-    },
+  borderWidth: 1,
+  borderColor: '#D1D5DB',
+  borderRadius: 6,
+  backgroundColor: '#fff',
+},
+
+ 
+  filterText: {
+    fontSize: 14,
+    marginRight: 6,
+    color: "#6C3EB5",
+
+    fontWeight: "700",
+  },
+  dropdown: {
+    position: 'absolute',
+    top: 40,
+    right: 0,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    width: 160,
+    zIndex: 999,
+    elevation: 4,
+  },
+
+  dropdownItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+
+
+  dropdownText: {
+    color: "#212121",
+    fontSize: 13,
+    fontWeight: "500",
+  },
 
     card: {
         backgroundColor: "#fff",
