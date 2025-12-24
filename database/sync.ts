@@ -3,9 +3,11 @@ import NetInfo from "@react-native-community/netinfo";
 import { database } from "./index";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { syncOfflineSignups } from "@/src/api/auth";
+import TripStatus from "./models/TripStatus";
+import { syncTripsToServer } from "./local/triplog";
 
 // ----------------------------------------------------
-// ✅ API URL
+//  API URL
 // 10.0.2.2 → Android Emulator maps to your PC localhost
 // Replace with your LOCAL IP when testing on real device
 // Example: "http://192.168.1.5:5000/v1/sync"
@@ -13,11 +15,11 @@ import { syncOfflineSignups } from "@/src/api/auth";
 const API_URL = "http://10.0.2.2:5000/v1/sync"; // https://fielduo.com/v1/sync
 
 // ----------------------------------------------------
-// 🔄 MAIN SYNC FUNCTION
+//  MAIN SYNC FUNCTION
 // ----------------------------------------------------
 export async function syncDatabase() {
   try {
-    console.log("🔄 Watermelon Sync Started...");
+    console.log(" Watermelon Sync Started...");
 
     const token = await AsyncStorage.getItem("authToken");
 
@@ -26,7 +28,7 @@ export async function syncDatabase() {
 
       // ⬇️ PULL CHANGES FROM SERVER ===============================
       pullChanges: async ({ lastPulledAt }) => {
-        console.log("⬇️ Pulling changes... Last:", lastPulledAt);
+        console.log("⬇ Pulling changes... Last:", lastPulledAt);
 
         const response = await fetch(
           `${API_URL}/pull?lastPulledAt=${lastPulledAt || 0}`,
@@ -45,7 +47,7 @@ export async function syncDatabase() {
 
         const data = await response.json();
 
-        console.log("⬇️ Pull Success", data);
+        console.log(" Pull Success", data);
 
         return {
           changes: data.changes,
@@ -55,7 +57,7 @@ export async function syncDatabase() {
 
       // ⬆️ PUSH CHANGES TO SERVER ================================
       pushChanges: async ({ changes }) => {
-        console.log("⬆️ Pushing local changes...");
+        console.log(" Pushing local changes...");
 
         const response = await fetch(`${API_URL}/push`, {
           method: "POST",
@@ -70,39 +72,41 @@ export async function syncDatabase() {
           throw new Error(`Push failed ${response.status}`);
         }
 
-        console.log("⬆️ Push Success!");
+        console.log(" Push Success!");
       },
 
       migrationsEnabledAtVersion: 1,
     });
 
-    console.log("✅ Watermelon Sync Completed!");
+    console.log(" Watermelon Sync Completed!");
   } catch (err) {
-    console.log("❌ Watermelon Sync Failed:", err);
+    console.log(" Watermelon Sync Failed:", err);
   }
 }
 
 // ----------------------------------------------------
-// 🔁 AUTO-SYNC ON NETWORK RECONNECT
+// AUTO-SYNC ON NETWORK RECONNECT
 // ----------------------------------------------------
 export function setupAutoSync() {
   NetInfo.addEventListener(async (state) => {
     if (state.isConnected) {
-      console.log("🌐 Online → Auto-Sync Triggered");
+      console.log(" Online → Auto-Sync Triggered");
 
       try {
-        // 1️⃣ Sync WatermelonDB local changes
-        await syncDatabase();
+        await syncDatabase();        // WatermelonDB
+        await syncTripsToServer();   // Trip logs 🔥
+        await syncOfflineSignups();  // Auth
 
-        // 2️⃣ Sync offline signup accounts
-        await syncOfflineSignups();
-
-        console.log("✅ All offline data synced");
+        console.log(" Auto-sync cycle completed");
       } catch (err) {
-        console.log("⚠️ Auto-sync failed:", err);
+        console.log(" Auto-sync failed:", err);
       }
-    } else {
-      console.log("📴 Offline → Sync paused");
     }
   });
 }
+
+
+export const isOnline = async () => {
+  const state = await NetInfo.fetch();
+  return !!state.isConnected;
+};

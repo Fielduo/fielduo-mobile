@@ -22,6 +22,12 @@ import { createTripLog, updateTripLog } from "@/src/api/auth";
 import { api } from "@/src/api/cilent";
 import { Ionicons } from "@expo/vector-icons";
 import FormHeader from "../../common/FormHeader";
+import { database } from "@/database";
+import { isOnline } from "@/database/sync";
+import { saveWorkOrdersToLocalDB, updateWorkOrderAssignmentOffline } from "@/database/local/workorder";
+import { Equipment } from "@/database/models/Equipment";
+import TripStatus from "@/database/models/TripStatus";
+import { deleteTripOffline, saveTripOffline } from "@/database/local/triplog";
 
 
 type Mode = "create" | "view" | "edit";
@@ -113,7 +119,16 @@ export interface WorkOrder {
   customer_id: string;
   status_id: string;
   priority_id: string;
+
+  // 🔽 OFFLINE SUPPORT (OPTIONAL)
+  job_assignment_id?: string;
+  technician_name?: string;
+  vehicle_id?: string;
+  site_name?: string;
+  site_address?: string;
+  gps_coordinates?: string;
 }
+
 
 interface WorkOrderResponse {
   success: boolean;
@@ -321,19 +336,45 @@ export default function TripLogForm() {
 
 
   // Search Trip IDs
+
+
+  const tripCollection = database.get('trips');
+  const equipmentCollection = database.get<Equipment>('equipment_conditions');
+  const statusCollection = database.get<TripStatus>('trip_statuses');
+
   const searchTrips = async (text: string) => {
     if (!text || text.length < 2) {
       setTripResults([]);
       return;
     }
 
+    const online = await isOnline();
+
+    // ---------------- OFFLINE ----------------
+    if (!online) {
+      console.log("📴 Offline Trip Search");
+
+      const localTrips = await tripCollection.query().fetch();
+
+      const filtered = localTrips
+        .map((t: any) => JSON.parse(t.data))
+        .filter((t: any) =>
+          String(t.id).toLowerCase().includes(text.toLowerCase())
+        )
+        .map((t: any) => ({ ...t, name: t.id }));
+
+      setTripResults(filtered);
+      return;
+    }
+
+    // ---------------- ONLINE ----------------
     try {
       const res = await api.get<TripItem[]>(
         `/field_worker_trips?search=${text}`
       );
 
       const formatted = Array.isArray(res)
-        ? res.map((t) => ({ ...t, name: t.id }))
+        ? res.map(t => ({ ...t, name: t.id }))
         : [];
 
       setTripResults(formatted);
@@ -342,31 +383,165 @@ export default function TripLogForm() {
       setTripResults([]);
     }
   };
+  // ---------------- SEED OFFLINE EQUIPMENT ----------------
+const seedEquipmentOffline = async () => {
+  const existing = await equipmentCollection.query().fetch();
 
-  const fetchDropdowns = async () => {
+  if (existing.length === 0) {
+    await database.write(async () => {
+      const equipmentData = [
+        {
+          server_id: '3f586ff5-d2a9-4acf-b721-cb1f944652bb',
+          name: 'Critical',
+          description: 'Equipment in critical condition',
+        },
+        {
+          server_id: '81256c13-1ed6-478b-9fb1-1fcc699a3f75',
+          name: 'Fair',
+          description: 'Equipment in fair condition',
+        },
+        {
+          server_id: '8d07cd64-f748-4734-ab50-437ddbb0d323',
+          name: 'Good',
+          description: 'Equipment in good condition',
+        },
+        {
+          server_id: 'c58f62af-e748-4076-a343-b8a0e6c57069',
+          name: 'Poor',
+          description: 'Equipment in poor condition',
+        },
+        {
+          server_id: 'dfe6bda1-7037-40de-aeb0-033cbc8168b9',
+          name: 'Excellent',
+          description: 'Equipment in excellent condition',
+        },
+      ];
+
+      for (const e of equipmentData) {
+        await equipmentCollection.create(item => {
+          item.server_id = e.server_id;   // ✅ MOST IMPORTANT
+          item.name = e.name;
+          item.description = e.description;
+          item.createdAt = new Date();
+          item.updatedAt = new Date();
+        });
+      }
+    });
+
+    console.log('✅ Offline equipment seeded with BACKEND IDs');
+  }
+};
+
+
+  // ---------------- FETCH DROPDOWNS ----------------
+const fetchDropdowns = async (
+  setEquipmentConditions: any,
+  setTripStatuses: any
+) => {
+  
+
+  const online = await isOnline();
+  
+
+  // ----- OFFLINE -----
+  if (!online) {
+    
+
     try {
-      const equipRes = await api.get<DropdownOption[]>("/triplog_equipment_conditions");
-      setEquipmentConditions(equipRes || []);
+     
+      await seedEquipmentOffline();
 
-      const statusRes = await api.get<DropdownOption[]>("/triplog_statuses");
-      setTripStatuses(statusRes || []);
+     
+      const equipments = await equipmentCollection.query().fetch();
+  
+
+     
+      const statuses = await statusCollection.query().fetch();
+    
+
+      setEquipmentConditions(
+        equipments.map(e => ({
+           id: e.server_id,        // ✅ server UUID
+          name: e.name,
+          description: e.description,
+        }))
+      );
+
+      setTripStatuses(
+        statuses.map(s => ({
+          id: s.statusId,      //  backend status id
+          name: s.name,
+        }))
+      );
+
+      
     } catch (err) {
-      console.error("Failed to fetch dropdowns:", err);
+     
     }
-  };
+
+    return;
+  }
+
+  // ----- ONLINE -----
+ 
+
+  try {
+   
+    const equipRes = await api.get<any[]>('/triplog_equipment_conditions');
+    
+   
+    setEquipmentConditions(equipRes || []);
+
+   
+    const statusRes = await api.get<any[]>('/triplog_statuses');
+   
+    setTripStatuses(statusRes || []);
+
+    
+  } catch (err: any) {
+    console.error(
+      "❌ Failed to fetch dropdowns from server:",
+      err?.response?.data || err?.message || err
+    );
+  }
+};
+
+
+ 
 
 
   const fetchWorkOrders = async () => {
+    const online = await isOnline();
+
+    const workOrderCollection = database.get("work_orders");
+    if (!workOrderCollection) {
+      console.log(" work_orders collection missing");
+      setWorkOrders([]);
+      return;
+    }
+
+    // ---------- OFFLINE ----------
+    if (!online) {
+      console.log(" Offline Work Orders");
+
+      const localOrders = await workOrderCollection.query().fetch();
+
+      setWorkOrders(
+        localOrders.map((w: any) => JSON.parse(w.data))
+      );
+      return;
+    }
+
+    // ---------- ONLINE ----------
     try {
       const res = await api.get<WorkOrderResponse>("/work_order");
-      console.log("📥 API Raw Response:", res);
+
       if (Array.isArray(res?.work_orders)) {
         setWorkOrders(res.work_orders);
+        await saveWorkOrdersToLocalDB(res.work_orders);
       } else {
-        console.warn("Unexpected response format:", res);
         setWorkOrders([]);
       }
-
     } catch (err) {
       console.error("Work Order fetch error:", err);
       setWorkOrders([]);
@@ -374,18 +549,14 @@ export default function TripLogForm() {
   };
 
 
+
   const handleWorkOrderSelect = async (workOrderId: string) => {
-    console.log("▶️ handleWorkOrderSelect called with:", workOrderId);
+    const online = await isOnline();
 
     const selected = workOrders.find(w => w.id === workOrderId);
-    console.log("Selected Work Order:", selected);
+    if (!selected) return;
 
-    if (!selected) {
-      console.warn("⚠️ No work order found!");
-      return;
-    }
-
-    // Update basic fields first
+    // ---------------- COMMON ----------------
     setFormData(prev => ({
       ...prev,
       work_order_number: selected.work_order_number,
@@ -396,85 +567,66 @@ export default function TripLogForm() {
       status_id: selected.status_id,
       priority_id: selected.priority_id,
     }));
-    console.log("🟦 Basic form fields updated");
 
+    // ---------------- OFFLINE ----------------
+    if (!online) {
+      console.log(" Offline → Using local assignment");
+
+      setFormData(prev => ({
+        ...prev,
+        job_assignment_id: selected.job_assignment_id || "",
+        technician_name: selected.technician_name || "",
+        vehicle_id: selected.vehicle_id || "",
+        site_name: selected.site_name || "",
+        site_address: selected.site_address || "",
+        gps_coordinates: selected.gps_coordinates || "",
+      }));
+
+      return;
+    }
+
+    // ---------------- ONLINE ----------------
     try {
       setIsAssignmentLoading(true);
-      console.log("Fetching assignment for WO:", selected.work_order_number);
 
-      // Fetch assignment
       const assignment: AssignmentResponse = await api.get(
         `/triplog_job_assignments/by-work-order/${encodeURIComponent(
           selected.work_order_number
         )}`
       );
 
-      console.log("Assignment API response:", assignment);
-
-      // If assignment NOT found
-      if (!assignment || !assignment.job_assignment_id) {
-        console.warn("❌ Technician NOT assigned for this work order");
-
-        setFormData(prev => ({
-          ...prev,
-          job_assignment_id: "",
-          technician_name: "",
-          vehicle_id: "",
-          site_name: "",
-          site_address: "",
-          gps_coordinates: "",
-        }));
-
-        return;
-      }
-
-      // Assignment found → fetch GPS
-      console.log("Assignment FOUND → Fetching GPS for work_order_id:", assignment.work_order_id);
+      if (!assignment?.job_assignment_id) return;
 
       let gpsCoords = "";
       try {
         const gpsRes: GPSResponse = await api.get(
           `/work_orders_gps/${assignment.work_order_id}/gps`
         );
-        console.log("GPS Response:", gpsRes);
+        if (gpsRes?.success) gpsCoords = gpsRes.gps_coordinates;
+      } catch { }
 
-        if (gpsRes?.success && gpsRes.gps_coordinates) {
-          gpsCoords = gpsRes.gps_coordinates;
-        } else {
-          console.log("No GPS found for this assignment");
-        }
-      } catch (gpsErr) {
-        console.error("GPS fetch error:", gpsErr);
-      }
-
-      // Update form with assignment + GPS
-      console.log("Updating form with assignment + GPS");
-      setFormData(prev => ({
-        ...prev,
+      const assignmentPayload = {
         job_assignment_id: assignment.job_assignment_id || "",
         technician_name: assignment.technician_name || "",
         vehicle_id: assignment.vehicle_id || "",
         site_name: assignment.site_name || "",
         site_address: assignment.site_address || "",
-        gps_coordinates: gpsCoords,
-      }));
+        gps_coordinates: gpsCoords || "",
+      };
 
-    } catch (err) {
-      console.error("❌ Assignment API Error:", err);
-
-      Alert.alert("Info", "Technician not assigned for this Work Order");
-
+      //  UPDATE FORM
       setFormData(prev => ({
         ...prev,
-        job_assignment_id: "",
-        technician_name: "",
-        vehicle_id: "",
-        site_name: "",
-        site_address: "",
-        gps_coordinates: "",
+        ...assignmentPayload,
       }));
+
+      //  SAVE TO OFFLINE DB
+      await updateWorkOrderAssignmentOffline(
+        selected.id,
+        assignmentPayload
+      );
+
     } finally {
-      console.log("⏹️ Ending assignment fetch");
       setIsAssignmentLoading(false);
     }
   };
@@ -489,32 +641,86 @@ export default function TripLogForm() {
 
     setSaving(true);
 
-    // Helper to format time as HH:mm:ss
     const formatTimeForBackend = (date?: Date | null) => {
       if (!date) return "";
-      const hrs = date.getHours().toString().padStart(2, "0");
-      const mins = date.getMinutes().toString().padStart(2, "0");
-      const secs = date.getSeconds().toString().padStart(2, "0");
-      return `${hrs}:${mins}:${secs}`;
+      return `${date.getHours().toString().padStart(2, "0")}:${date
+        .getMinutes()
+        .toString()
+        .padStart(2, "0")}:${date
+          .getSeconds()
+          .toString()
+          .padStart(2, "0")}`;
     };
 
+    const online = await isOnline();
+
+    // ------------------ OFFLINE ------------------
+    if (!online) {
+      await saveTripOffline(form.trip_id!, {
+        ...form,
+
+        // 🔥 IMPORTANT
+        mode,                 // "create" | "edit"
+        id: form.id || null,  // backend ID for update
+
+        trip_date: date?.toISOString().split("T")[0],
+        start_time: formatTimeForBackend(startTime),
+        end_time: formatTimeForBackend(endTime),
+        total_duration: duration,
+
+        work_order_number: formData.work_order_number,
+        job_assignment_id: formData.job_assignment_id,
+        technician_name: formData.technician_name,
+        vehicle_id: formData.vehicle_id,
+
+        site_name: formData.site_name,
+        site_address: formData.site_address,
+        gps_coordinates: formData.gps_coordinates,
+
+        start_odometer: startOdo,
+        end_odometer: endOdo,
+        total_mileage: totalMileage,
+        travel_time: timeOnSite,
+
+        work_description: workDescription,
+        equipment_condition_id: selectedEquipmentCondition,
+        parts_used: partsUsed,
+        time_on_site: timeOnSite,
+
+        root_cause: rootCause,
+        resolution: resolutionTaken,
+        technician_notes: technicianNotes,
+        job_status_id: selectedTripStatus,
+
+        images: {
+          before: beforeImage,
+          after: afterImage,
+        },
+        documents: documentFiles,
+      });
+
+
+      Alert.alert("Saved Offline", "Will sync when internet is available");
+      setSaving(false);
+      navigation.goBack();
+      return;
+    }
+
+    // ------------------ ONLINE ------------------
     try {
       const fd = new FormData();
 
-      // Basic trip fields
       fd.append("trip_id", form.trip_id || "");
       fd.append("trip_date", date ? date.toISOString().split("T")[0] : "");
       fd.append("start_time", formatTimeForBackend(startTime));
       fd.append("end_time", formatTimeForBackend(endTime));
       fd.append("total_duration", duration || "");
 
-      // Linking info
       fd.append("work_order_number", formData.work_order_number || "");
       fd.append("job_assignment_id", formData.job_assignment_id || "");
       fd.append("technician_name", formData.technician_name || "");
       fd.append("vehicle_id", formData.vehicle_id || "");
 
-      // Location & travel
       fd.append("site_name", formData.site_name || "");
       fd.append("site_address", formData.site_address || "");
       fd.append("gps_coordinates", formData.gps_coordinates || "");
@@ -523,67 +729,75 @@ export default function TripLogForm() {
       fd.append("total_mileage", totalMileage || "0");
       fd.append("travel_time", String(timeOnSite || 0));
 
-      // Work performed details
       fd.append("work_description", workDescription || "");
       fd.append("equipment_condition_id", selectedEquipmentCondition || "");
       fd.append("parts_used", partsUsed || "");
       fd.append("time_on_site", String(timeOnSite || 0));
 
-      // Issues & observations
       fd.append("root_cause", rootCause || "");
       fd.append("resolution", resolutionTaken || "");
       fd.append("technician_notes", technicianNotes || "");
       fd.append("job_status_id", selectedTripStatus || "");
-      if (beforeImage) fd.append("photos", {
-        uri: beforeImage,
-        name: `before_${Date.now()}.jpg`,
-        type: "image/jpeg"
-      } as any);
 
-      if (afterImage) fd.append("photos", {
-        uri: afterImage,
-        name: `after_${Date.now()}.jpg`,
-        type: "image/jpeg"
-      } as any);
+      if (beforeImage) {
+        fd.append("photos", {
+          uri: beforeImage,
+          name: `before_${Date.now()}.jpg`,
+          type: "image/jpeg",
+        } as any);
+      }
 
-      // Attachments
-      if (documentFile) fd.append("attachments", {
-        uri: documentFile.uri,
-        name: documentFile.name,
-        type: documentFile.mimeType || "application/pdf"
-      } as any);
+      if (afterImage) {
+        fd.append("photos", {
+          uri: afterImage,
+          name: `after_${Date.now()}.jpg`,
+          type: "image/jpeg",
+        } as any);
+      }
 
-      // GPS
+      documentFiles.forEach(doc =>
+        fd.append("attachments", {
+          uri: doc.uri,
+          name: doc.name,
+          type: doc.file?.mimeType || "application/octet-stream",
+        } as any)
+      );
+
       if (form.latitude) fd.append("latitude", String(form.latitude));
       if (form.longitude) fd.append("longitude", String(form.longitude));
-
-      // Optional note
       if (form.note) fd.append("note", form.note);
 
-      // Send to backend
-      let response;
       if (mode === "create") {
-        response = await createTripLog(fd);
+        await createTripLog(fd);
         Alert.alert("Success", "Trip log created successfully!");
       } else {
-        response = await updateTripLog(String(form.id), fd);
+        await updateTripLog(String(form.id), fd);
         Alert.alert("Success", "Trip log updated successfully!");
       }
 
       navigation.goBack();
     } catch (err: any) {
       console.error("❌ Error saving trip log:", err?.response?.data || err);
-      Alert.alert(
-        "Error",
-        err?.response?.data?.error || err?.message || "Failed to save trip log"
-      );
+      Alert.alert("Error", err?.message || "Failed to save trip log");
     } finally {
       setSaving(false);
     }
   };
 
+
   // Delete
   const handleDelete = async () => {
+    const online = await isOnline();
+
+    // ---------------- OFFLINE ----------------
+    if (!online) {
+      await deleteTripOffline(form.trip_id!);
+      Alert.alert("Deleted Offline", "Will sync when internet is available");
+      navigation.goBack();
+      return;
+    }
+
+    // ---------------- ONLINE ----------------
     try {
       await api.delete(`/trip_logs/${form.id}`);
       Alert.alert("Deleted", "Trip log deleted");
@@ -593,10 +807,12 @@ export default function TripLogForm() {
     }
   };
 
+
   useEffect(() => {
     fetchWorkOrders();
-    fetchDropdowns();
+    fetchDropdowns(setEquipmentConditions, setTripStatuses);
   }, []);
+
 
   useEffect(() => {
     if (!data) return;
