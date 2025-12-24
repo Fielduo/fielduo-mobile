@@ -7,12 +7,11 @@
     "icon": "./assets/images/icon.png",
     "scheme": "fielduomobile",
     "userInterfaceStyle": "automatic",
-  "splash": {
-  "image": "./assets/images/Spalsh.png",
-  "resizeMode": "contain",
-  "backgroundColor": "#ffffff"
-},
-
+    "splash": {
+      "image": "./assets/images/Spalsh.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.santhiyak.fielduomobile",
@@ -32,16 +31,18 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
-    "plugins": ["expo-sqlite"],
+    "plugins": [
+      "expo-sqlite",
+      "expo-router"
+    ],
     "extra": {
       "MAPBOX_ACCESS_TOKEN": "pk.eyJ1Ijoia2lydXRoaWdhbmUiLCJhIjoiY21oYXJyeXdqMWozZjJsczV5dDlycnd5NyJ9.Bk5zF4AQxBeWBJjHux3UHQ",
       "eas": {
         "projectId": "ae17c76e-4467-4ebe-91a6-a0f006ff0a7d"
       }
     }
-    
   }
 }
