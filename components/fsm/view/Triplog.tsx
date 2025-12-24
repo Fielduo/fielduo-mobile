@@ -16,6 +16,7 @@ import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/Search
 import { api } from "@/src/api/cilent";
 import FilterModal, { AppliedFilter } from "@/components/common/FilterModal";
 import { Ionicons } from "@expo/vector-icons";
+import { fetchTrips, fetchTripStatusesFromAPI } from "@/src/api/auth";
 
 
 type Trip = {
@@ -36,7 +37,7 @@ type Trip = {
 
 
 type NavigationProp = NativeStackNavigationProp<SearchMenuStackParamList, "TripLog">;
-type TripStatus = { id: number; name: string };
+type TripStatus = { id: string; name: string };
 
 export default function TripLog() {
   const navigation = useNavigation<NavigationProp>();
@@ -44,53 +45,50 @@ export default function TripLog() {
   const [loading, setLoading] = useState<boolean>(true);
   const [filterVisible, setFilterVisible] = useState(false);
   const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(null);
+  const [offlineMode, setOfflineMode] = useState(false);
 
   const [tripStatuses, setTripStatuses] = useState<TripStatus[]>([]);
-const [dropdownOpen, setDropdownOpen] = useState(false);
-const [viewMode, setViewMode] = useState<'all' | 'recent'>('all');
-const [recentlyViewedTrips, setRecentlyViewedTrips] = useState<Trip[]>([]);
-
-
-  const fetchTrips = async () => {
-
-    try {
-      setLoading(true);
-      const data = await api.get<Trip[]>("/trip_logs");
-
-      setTrips(data || []);
-
-    } catch (err: any) {
-      console.error("❌ Error fetching trip logs:", err.response?.data || err);
-
-      if (err.response?.status === 401) {
-        console.warn("⚠️ Session expired. Redirecting to login...");
-        Alert.alert("Session expired", "Please login again.");
-      } else {
-        console.warn("⚠️ Unable to fetch trip logs. Showing alert.");
-        Alert.alert("Error", "Unable to fetch trip logs");
-      }
-
-    } finally {
-      setLoading(false);
-      console.log("⏹️ Fetch trips finished. Loading set to false");
-    }
-  };
-
-  const fetchTripStatuses = async () => {
-    try {
-      const data = await api.get<TripStatus[]>("/triplog_statuses");
-
-      setTripStatuses(data || []);
-    } catch (err: any) {
-      console.error("❌ Error fetching trip statuses:", err.response?.data || err);
-    }
-  };
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'all' | 'recent'>('all');
+  const [recentlyViewedTrips, setRecentlyViewedTrips] = useState<Trip[]>([]);
 
 
   useEffect(() => {
-    fetchTripStatuses();
-    fetchTrips();
+    const loadTrips = async () => {
+      setLoading(true);
+      try {
+        const res = await fetchTrips();
+        // Ensure timestamp is number
+        const normalizedTrips = (res.data || []).map(trip => ({
+          ...trip,
+          timestamp: trip.timestamp ? new Date(trip.timestamp).getTime() : Date.now(),
+        }));
+        setTrips(normalizedTrips);
+        setOfflineMode(res.offline);
+      } catch (err) {
+        console.log("Trip load error:", err);
+        setTrips([]);
+        setOfflineMode(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadTrips();
   }, []);
+
+  // Load statuses
+  useEffect(() => {
+    const loadStatuses = async () => {
+      const statuses = await fetchTripStatusesFromAPI();
+      setTripStatuses(statuses);
+    };
+    loadStatuses();
+  }, []);
+
+
+
+
+
   const filteredTrips = trips.filter((trip) => {
     if (!appliedFilter || !appliedFilter.field) return true;
 
@@ -99,24 +97,39 @@ const [recentlyViewedTrips, setRecentlyViewedTrips] = useState<Trip[]>([]);
 
     return rawValue.toString().toLowerCase().includes(appliedFilter.value.toLowerCase());
   });
-const displayedTrips = trips.filter((trip) => {
-  // 1️⃣ Filter by appliedFilter
-  let matchesFilter = true;
-  if (appliedFilter?.field) {
-    const rawValue = trip[appliedFilter.field as keyof Trip];
-    matchesFilter = rawValue
-      ? rawValue.toString().toLowerCase().includes(appliedFilter.value.toLowerCase())
-      : false;
+  const displayedTrips = trips.filter((trip) => {
+    // 1️ Filter by appliedFilter
+    let matchesFilter = true;
+    if (appliedFilter?.field) {
+      const rawValue = trip[appliedFilter.field as keyof Trip];
+      matchesFilter = rawValue
+        ? rawValue.toString().toLowerCase().includes(appliedFilter.value.toLowerCase())
+        : false;
+    }
+
+    // 2 Filter by viewMode
+    let matchesViewMode = true;
+    if (viewMode === 'recent') {
+      matchesViewMode = recentlyViewedTrips.some((t) => t.id === trip.id);
+    }
+
+    return matchesFilter && matchesViewMode;
+  });
+
+  {
+    offlineMode && (
+      <Text style={{ color: "red", fontSize: 12, marginBottom: 10 }}>
+        Offline mode - Showing last 14 days trip logs only
+      </Text>
+    )
   }
 
-  // 2️⃣ Filter by viewMode
-  let matchesViewMode = true;
-  if (viewMode === 'recent') {
-    matchesViewMode = recentlyViewedTrips.some((t) => t.id === trip.id);
-  }
-
-  return matchesFilter && matchesViewMode;
-});
+  const getStatusName = (statusId?: string | number) => {
+    if (!statusId) return "";
+    const idStr = statusId.toString();
+    const status = tripStatuses.find(s => s.id === idStr);
+    return status ? status.name : idStr;
+  };
 
 
   return (
@@ -127,69 +140,69 @@ const displayedTrips = trips.filter((trip) => {
         buttonText="+ New Logs"
         onButtonClick={() => navigation.navigate("TripLogForm", { mode: "create" })}
 
-        onSearchPress={() => setFilterVisible(true)} // 🔹 Open filter
+        onSearchPress={() => setFilterVisible(true)} // Open filter
       />
 
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-  <View style={styles.headerRow}>
-        <View style={styles.header}>
-          <Text style={styles.headerTag}>FSM</Text>
-          <Text style={styles.headerTitle}>Trip Logs</Text>
-          <Text style={styles.headerMeta}>{trips.length} logs - Updated just now</Text>
-        </View>
+        <View style={styles.headerRow}>
+          <View style={styles.header}>
+            <Text style={styles.headerTag}>FSM</Text>
+            <Text style={styles.headerTitle}>Trip Logs</Text>
+            <Text style={styles.headerMeta}>{trips.length} logs - Updated just now</Text>
+          </View>
           <View style={{ position: 'relative' }}>
-    <TouchableOpacity
-      style={styles.filterBtn}
-      onPress={() => setDropdownOpen((prev) => !prev)}
-    >
-      <Text style={styles.filterText}>
-        {viewMode === 'all' ? 'All' : 'Recently Viewed'}
-      </Text>
-      <Ionicons name="chevron-down-outline" size={16} color="#444" />
-    </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.filterBtn}
+              onPress={() => setDropdownOpen((prev) => !prev)}
+            >
+              <Text style={styles.filterText}>
+                {viewMode === 'all' ? 'All' : 'Recently Viewed'}
+              </Text>
+              <Ionicons name="chevron-down-outline" size={16} color="#444" />
+            </TouchableOpacity>
 
-    {dropdownOpen && (
-      <View style={styles.dropdown}>
-        <TouchableOpacity
-          style={styles.dropdownItem}
-          onPress={() => {
-            setViewMode('all');
-            setDropdownOpen(false);
-          }}
-        >
-          <Text>All</Text>
-        </TouchableOpacity>
+            {dropdownOpen && (
+              <View style={styles.dropdown}>
+                <TouchableOpacity
+                  style={styles.dropdownItem}
+                  onPress={() => {
+                    setViewMode('all');
+                    setDropdownOpen(false);
+                  }}
+                >
+                  <Text>All</Text>
+                </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.dropdownItem}
-          onPress={() => {
-            setViewMode('recent');
-            setDropdownOpen(false);
-          }}
-        >
-          <Text>Recently Viewed</Text>
-        </TouchableOpacity>
-      </View>
-    )}
-  </View>
-</View>      
+                <TouchableOpacity
+                  style={styles.dropdownItem}
+                  onPress={() => {
+                    setViewMode('recent');
+                    setDropdownOpen(false);
+                  }}
+                >
+                  <Text>Recently Viewed</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
         {loading ? (
           <ActivityIndicator size="large" color="#6B4EFF" />
         ) : (
-           displayedTrips.map((trip) => (
+          displayedTrips.map((trip) => (
             <TouchableOpacity
               key={trip.id}
               style={styles.card}
               onPress={() => {
-  // Mark this trip as recently viewed
-  setRecentlyViewedTrips((prev) => {
-    const alreadyViewed = prev.find((t) => t.id === trip.id);
-    if (alreadyViewed) return prev;
-    return [trip, ...prev].slice(0, 20); // Keep last 20
-  });
+                // Mark this trip as recently viewed
+                setRecentlyViewedTrips((prev) => {
+                  const alreadyViewed = prev.find((t) => t.id === trip.id);
+                  if (alreadyViewed) return prev;
+                  return [trip, ...prev].slice(0, 20); // Keep last 20
+                });
 
-  navigation.navigate("TripLogForm", { mode: "view", data: trip });
-}}
+                navigation.navigate("TripLogForm", { mode: "view", data: trip });
+              }}
 
             >
               {/* Trip ID + Date */}
@@ -224,9 +237,7 @@ const displayedTrips = trips.filter((trip) => {
                 <View style={styles.thirdCol}>
                   <Text style={styles.smallLabel}>Status</Text>
                   <Text style={styles.smallValue}>
-                    {trip.job_status_id
-                      ? tripStatuses.find((s) => String(s.id) === trip.job_status_id)?.name ?? trip.job_status_id
-                      : "-"}
+                    {getStatusName(trip.job_status_id)}
                   </Text>
 
                 </View>
@@ -326,32 +337,32 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   headerRow: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  paddingHorizontal: 16,
-  paddingTop: 10,
-  backgroundColor: '#FFF',
-},
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    backgroundColor: '#FFF',
+  },
 
 
 
-filterBtn: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'space-between',
+  filterBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
 
-  height: 36,
-  minWidth: 170,
-  paddingHorizontal: 12,
+    height: 36,
+    minWidth: 170,
+    paddingHorizontal: 12,
 
-  borderWidth: 1,
-  borderColor: '#D1D5DB',
-  borderRadius: 6,
-  backgroundColor: '#fff',
-},
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 6,
+    backgroundColor: '#fff',
+  },
 
- 
+
   filterText: {
     fontSize: 14,
     marginRight: 6,
