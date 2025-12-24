@@ -2,11 +2,14 @@ import NetInfo from '@react-native-community/netinfo';
 import User from '@/database/models/User';
 import { api } from './cilent';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { syncDatabase } from '@/database/sync';
 import { database } from '@/database';
 import { FieldWorker, FieldWorkerTrip, UserProfile, Vehicle, VehiclePayload } from '@/types/Worker';
 import { CustomerFeedback } from '@/components/Billing/View/CustomerFeedback';
 import { Payment } from '@/components/Billing/View/Payments';
+import { Q } from '@nozbe/watermelondb';
+import Trip from '@/database/models/Triplog';
+import TripStatus from '@/database/models/TripStatus';
+import { v4 as uuidv4 } from "uuid";
 
 interface SignupResponse { success: boolean; message?: string }
 
@@ -25,7 +28,7 @@ export const login = async (email: string, password: string): Promise<LoginRespo
 
 
   if (!isConnected) {
-    
+
     try {
       const localUsers = await usersCollection.query().fetch();
       const localUser = localUsers.find(u => u.email === email && u.passwordHash === password);
@@ -102,7 +105,6 @@ export const login = async (email: string, password: string): Promise<LoginRespo
   }
 };
 
-
 export const signup = async (formData: {
   firstname: string;
   lastname: string;
@@ -115,10 +117,10 @@ export const signup = async (formData: {
   const usersCollection = database.get<User>('users');
   const state = await NetInfo.fetch();
 
- 
+
 
   if (!state.isConnected) {
-  
+
     await database.write(async () => {
       await usersCollection.create(u => {
         u.firstName = formData.firstname;
@@ -131,13 +133,13 @@ export const signup = async (formData: {
         u.updatedAt = Date.now();
       });
     });
-   
+
     return { success: true, message: 'Stored locally, will sync later' };
   }
 
- 
+
   const response = await api.post<SignupResponse>('/signup', formData);
- 
+
   return response;
 };
 
@@ -146,11 +148,11 @@ export const syncOfflineSignups = async () => {
   const state = await NetInfo.fetch();
 
   if (!state.isConnected) {
-   
+
     return;
   }
 
- 
+
   const unsyncedUsers = await usersCollection.query().fetch();
   const usersToSync = unsyncedUsers.filter(u => !u.isSynced);
 
@@ -158,7 +160,7 @@ export const syncOfflineSignups = async () => {
 
   for (const u of usersToSync) {
     try {
-   
+
 
       const response = await api.post<SignupResponse>('/signup', {
         firstname: u.firstName,
@@ -170,10 +172,10 @@ export const syncOfflineSignups = async () => {
         countryCode: u.countryCode,
       });
 
-     
+
 
       if (response.success) {
-       
+
         await database.write(async () => {
           await u.update(user => {
             user.isSynced = true;
@@ -188,6 +190,148 @@ export const syncOfflineSignups = async () => {
 };
 
 
+const tripCollection = database.get<Trip>('trips');
+//  Internet check
+const isOnline = async () => {
+  const state = await NetInfo.fetch();
+  return Boolean(state.isConnected && state.isInternetReachable);
+};
+
+// ⬇ Save trips locally
+export const saveTripsToLocalDB = async (trips: any[]) => {
+  
+  if (!Array.isArray(trips)) {
+    
+    return;
+  }
+
+  await database.write(async () => {
+    for (const trip of trips) {
+      
+
+      await tripCollection.create(t => {
+        t.data = JSON.stringify(trip);
+        t.timestamp = trip.timestamp
+          ? new Date(trip.timestamp).getTime()
+          : Date.now();
+      });
+    }
+  });
+
+ 
+};
+
+//  OFFLINE → last 14 days
+export const getOfflineTripsLast14Days = async (): Promise<any[]> => {
+ 
+
+  const fourteenDaysAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
+ 
+
+  const trips = await tripCollection
+    .query(Q.where('timestamp', Q.gte(fourteenDaysAgo)))
+    .fetch();
+
+  
+
+  const parsedTrips = trips.map(t => {
+    const parsed = JSON.parse(t.data);
+    
+    return parsed;
+  });
+
+  
+
+  return parsedTrips;
+};
+
+
+//  MAIN FETCH
+export const fetchTrips = async (): Promise<{
+  data: any[];
+  offline: boolean;
+}> => {
+  try {
+    const online = await isOnline();
+
+    if (online) {
+      const res = await api.get<any[]>('/trip_logs');
+      await saveTripsToLocalDB(res ?? []);
+      return { data: res ?? [], offline: false };
+    }
+  } catch (error) {
+    console.log("fetchTrips error:", error);
+  }
+
+  const offlineTrips = await getOfflineTripsLast14Days();
+  return { data: offlineTrips ?? [], offline: true };
+};
+
+const statusCollection = database.get<TripStatus>('trip_statuses');
+
+type TripStatusDTO = { id: string; name: string };
+
+
+export const saveTripStatusesToLocalDB = async (statuses: TripStatusDTO[]) => {
+ 
+
+  await database.write(async () => {
+    for (const s of statuses) {
+      
+
+      const existing = await statusCollection
+        .query(Q.where('status_id', s.id))
+        .fetch();
+
+     
+      if (existing.length > 0) {
+        await existing[0].update(t => {
+          console.log("✏️ Updating status:", s.id, s.name);
+          t.name = s.name;
+        });
+      } else {
+        await statusCollection.create(t => {
+          console.log("➕ Creating new status:", s.id, s.name);
+          t.statusId = s.id;
+          t.name = s.name;
+        });
+      }
+    }
+  });
+
+};
+
+export const fetchTripStatusesFromAPI = async (): Promise<TripStatusDTO[]> => {
+  try {
+    const online = await isOnline();
+
+    if (online) {
+      const res = await api.get<TripStatusDTO[]>('/triplog_statuses');
+      await saveTripStatusesToLocalDB(res ?? []);
+      return res ?? [];
+    }
+  } catch (error) {
+    console.log("Status API error:", error);
+  }
+
+  // ✅ ALWAYS fallback
+  return await getOfflineTripStatuses();
+};
+
+export const getOfflineTripStatuses = async () => {
+
+  const statuses = await statusCollection.query().fetch();
+
+  console.log("Offline statuses:", statuses);
+
+  return statuses.map(s => ({
+    id: s.statusId.toString(), // string
+    name: s.name,
+  }));
+
+};
+
+
 export const createTripLog = async (formData: FormData) => {
   return await api.postMultipart("/trip_logs", formData);
 };
@@ -196,15 +340,13 @@ export const updateTripLog = async (id: string, formData: FormData) => {
   return await api.putMultipart(`/trip_logs/${id}`, formData);
 };
 
-
-
 export const createWorker = async (data: FieldWorker) => api.post<FieldWorker>("/workerforce", data);
 
 export const updateWorker = async (id: string, data: FieldWorker) => api.put<FieldWorker>(`/workerforce/${id}`, data);
 
 export const getWorkers = async (): Promise<FieldWorker[]> => {
   const res = await api.get<FieldWorker[]>("/workerforce");
-  return res; 
+  return res;
 };
 
 export const deleteWorker = async (id: string) => api.delete<{ message: string }>(`/workerforce/${id}`);
@@ -232,7 +374,7 @@ export const createTrip = async (data: {
     const res = await api.post("/field_worker_trips", data);
     return res;
   } catch (error: any) {
-   
+
     throw new Error(error.response?.data?.error || "Failed to create trip");
   }
 };
@@ -304,14 +446,14 @@ export const vehicleService = {
   async getAll(): Promise<Vehicle[]> {
     try {
       const res = await api.get<Vehicle[]>("/vehicles");
-      return res; 
+      return res;
     } catch (err: any) {
       console.error(" Error fetching vehicles:", err.response?.data || err.message);
       throw new Error(err.response?.data?.error || "Failed to fetch vehicles");
     }
   },
 
- 
+
   async getById(id: string) {
     try {
       const res = await api.get(`/vehicles/${id}`);
@@ -363,7 +505,7 @@ export const workCompletionService = {
   async getAll(): Promise<any[]> {
     try {
       const res = await api.get<any[]>("/work_completion_status");
-      return res; 
+      return res;
     } catch (err: any) {
       console.error(" Error fetching work completion statuses:", err.response?.data || err.message);
       throw new Error(err.response?.data?.error || "Failed to fetch work completion statuses");
@@ -387,7 +529,7 @@ export const workCompletionService = {
     }
   },
 
-  
+
   async update(id: string, data: any) {
     try {
       const res = await api.put(`/work_completion_status/${id}`, data);
@@ -398,13 +540,13 @@ export const workCompletionService = {
     }
   },
 
- 
+
   async remove(id: string) {
     try {
       const res = await api.delete(`/work_completion_status/${id}`);
       return res;
     } catch (err: any) {
-    
+
       throw new Error(err.response?.data?.error || "Failed to delete record");
     }
   },
@@ -415,7 +557,7 @@ export const workCompletionService = {
       const res = await api.get(`/work_completion_status/work_orders/search?q=${query}`);
       return res;
     } catch (err: any) {
-    
+
       return [];
     }
   },
@@ -426,7 +568,7 @@ export const workCompletionService = {
       const res = await api.get(`/work_completion_status/users/search?q=${query}`);
       return res;
     } catch (err: any) {
-     
+
       return [];
     }
   },
