@@ -3,8 +3,160 @@ import { Q } from "@nozbe/watermelondb";
 import { database } from "@/database";
 import Trip from "@/database/models/Triplog";
 import { api } from "@/src/api/cilent";
+import TripStatus from "../models/TripStatus";
 
-const tripCollection = database.get<Trip>("trips");
+
+const tripCollection = database.get<Trip>('trips');
+//  Internet check
+const isOnline = async () => {
+  const state = await NetInfo.fetch();
+  return Boolean(state.isConnected && state.isInternetReachable);
+};
+
+// ⬇ Save trips locally
+export const saveTripsToLocalDB = async (trips: any[]) => {
+  if (!Array.isArray(trips)) return;
+
+  await database.write(async () => {
+    for (const trip of trips) {
+      if (!trip.trip_id && !trip.id) continue;
+
+      const tripId = trip.trip_id || trip.id;
+
+      const existing = await tripCollection
+        .query(Q.where("trip_id", tripId))
+        .fetch();
+
+      const data = JSON.stringify(trip);
+      const timestamp = trip.timestamp
+        ? new Date(trip.timestamp).getTime()
+        : Date.now();
+
+      if (existing.length > 0) {
+        // ✅ UPDATE
+        await existing[0].update(t => {
+          t.data = data;
+          t.timestamp = timestamp;
+          t.syncState = "synced";
+        });
+      } else {
+        // ✅ INSERT ONCE
+        await tripCollection.create(t => {
+          t.tripId = tripId;
+          t.data = data;
+          t.timestamp = timestamp;
+          t.syncState = "synced";
+        });
+      }
+    }
+  });
+};
+
+
+//  OFFLINE → last 14 days
+export const getOfflineTripsLast14Days = async (): Promise<any[]> => {
+  const fourteenDaysAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
+
+  const records = await tripCollection
+    .query(Q.where("timestamp", Q.gte(fourteenDaysAgo)))
+    .fetch();
+
+  return records.map(r => {
+    const parsed = JSON.parse(r.data);
+    return {
+      ...parsed,
+      id: parsed.id || r.tripId,
+    };
+  });
+};
+
+
+
+//  MAIN FETCH
+export const fetchTrips = async (): Promise<{
+  data: any[];
+  offline: boolean;
+}> => {
+  try {
+    const net = await NetInfo.fetch();
+
+    if (net.isConnected) {
+      const res = await api.get<any[]>("/trip_logs");
+      await saveTripsToLocalDB(res);
+      return { data: res, offline: false };
+    }
+  } catch (err) {
+    console.log("fetchTrips error:", err);
+  }
+
+  const offlineTrips = await getOfflineTripsLast14Days();
+  return { data: offlineTrips, offline: true };
+};
+
+
+const statusCollection = database.get<TripStatus>('trip_statuses');
+
+type TripStatusDTO = { id: string; name: string };
+
+
+export const saveTripStatusesToLocalDB = async (statuses: TripStatusDTO[]) => {
+
+
+  await database.write(async () => {
+    for (const s of statuses) {
+
+
+      const existing = await statusCollection
+        .query(Q.where('status_id', s.id))
+        .fetch();
+
+
+      if (existing.length > 0) {
+        await existing[0].update(t => {
+
+          t.name = s.name;
+        });
+      } else {
+        await statusCollection.create(t => {
+
+          t.statusId = s.id;
+          t.name = s.name;
+        });
+      }
+    }
+  });
+
+};
+
+export const fetchTripStatusesFromAPI = async (): Promise<TripStatusDTO[]> => {
+  try {
+    const online = await isOnline();
+
+    if (online) {
+      const res = await api.get<TripStatusDTO[]>('/triplog_statuses');
+      await saveTripStatusesToLocalDB(res ?? []);
+      return res ?? [];
+    }
+  } catch (error) {
+    console.log("Status API error:", error);
+  }
+
+  // ✅ ALWAYS fallback
+  return await getOfflineTripStatuses();
+};
+
+export const getOfflineTripStatuses = async () => {
+
+  const statuses = await statusCollection.query().fetch();
+
+
+  return statuses.map(s => ({
+    id: s.statusId.toString(), // string
+    name: s.name,
+  }));
+
+};
+
 
 /**
  * -------------------------

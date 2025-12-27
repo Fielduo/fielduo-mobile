@@ -20,7 +20,7 @@ import * as ImagePicker from "expo-image-picker";
 import SearchDropdown from "@/components/common/searchDropdown";
 import { createTripLog, updateTripLog } from "@/src/api/auth";
 import { api } from "@/src/api/cilent";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import FormHeader from "../../common/FormHeader";
 import { database } from "@/database";
 import { isOnline } from "@/database/sync";
@@ -28,6 +28,7 @@ import { saveWorkOrdersToLocalDB, updateWorkOrderAssignmentOffline } from "@/dat
 import { Equipment } from "@/database/models/Equipment";
 import TripStatus from "@/database/models/TripStatus";
 import { deleteTripOffline, saveTripOffline } from "@/database/local/triplog";
+import { useVoiceToText } from "@/store/useVoiceToText";
 
 
 type Mode = "create" | "view" | "edit";
@@ -85,7 +86,12 @@ type RouteParams = {
   data?: TripLog;
 };
 
-type TripItem = { id: string; name: string };
+type TripItem = {
+  id: string;
+  name: string;
+  job_assignment_number: string; // 👈 ADD THIS
+};
+
 type PickerMode = "date" | "start" | "end";
 
 interface DropdownOption {
@@ -180,6 +186,7 @@ export default function TripLogForm() {
   const [timeOnSite, setTimeOnSite] = useState("");
   const [partsUsed, setPartsUsed] = useState("");
   const [documentFiles, setDocumentFiles] = useState<any[]>([]);
+  const { text, start, stop, listening } = useVoiceToText();
 
   const [rootCause, setRootCause] = useState("");
   const [resolutionTaken, setResolutionTaken] = useState("");
@@ -359,9 +366,15 @@ export default function TripLogForm() {
       const filtered = localTrips
         .map((t: any) => JSON.parse(t.data))
         .filter((t: any) =>
-          String(t.id).toLowerCase().includes(text.toLowerCase())
+          String(t.job_assignment_number)
+            ?.toLowerCase()
+            .includes(text.toLowerCase())
         )
-        .map((t: any) => ({ ...t, name: t.id }));
+        .map((t: any) => ({
+          ...t,
+          name: t.job_assignment_number, // 👈 display
+          id: t.job_assignment_number,   // 👈 key
+        }));
 
       setTripResults(filtered);
       return;
@@ -370,11 +383,15 @@ export default function TripLogForm() {
     // ---------------- ONLINE ----------------
     try {
       const res = await api.get<TripItem[]>(
-        `/field_worker_trips?search=${text}`
+        `/field_worker_trips?search_assignment=${text}`
       );
 
       const formatted = Array.isArray(res)
-        ? res.map(t => ({ ...t, name: t.id }))
+        ? res.map(t => ({
+          ...t,
+          name: t.job_assignment_number, // 👈 display
+          id: t.job_assignment_number,   // 👈 key
+        }))
         : [];
 
       setTripResults(formatted);
@@ -383,131 +400,130 @@ export default function TripLogForm() {
       setTripResults([]);
     }
   };
+
   // ---------------- SEED OFFLINE EQUIPMENT ----------------
-const seedEquipmentOffline = async () => {
-  const existing = await equipmentCollection.query().fetch();
+  const seedEquipmentOffline = async () => {
+    const existing = await equipmentCollection.query().fetch();
 
-  if (existing.length === 0) {
-    await database.write(async () => {
-      const equipmentData = [
-        {
-          server_id: '3f586ff5-d2a9-4acf-b721-cb1f944652bb',
-          name: 'Critical',
-          description: 'Equipment in critical condition',
-        },
-        {
-          server_id: '81256c13-1ed6-478b-9fb1-1fcc699a3f75',
-          name: 'Fair',
-          description: 'Equipment in fair condition',
-        },
-        {
-          server_id: '8d07cd64-f748-4734-ab50-437ddbb0d323',
-          name: 'Good',
-          description: 'Equipment in good condition',
-        },
-        {
-          server_id: 'c58f62af-e748-4076-a343-b8a0e6c57069',
-          name: 'Poor',
-          description: 'Equipment in poor condition',
-        },
-        {
-          server_id: 'dfe6bda1-7037-40de-aeb0-033cbc8168b9',
-          name: 'Excellent',
-          description: 'Equipment in excellent condition',
-        },
-      ];
+    if (existing.length === 0) {
+      await database.write(async () => {
+        const equipmentData = [
+          {
+            server_id: '3f586ff5-d2a9-4acf-b721-cb1f944652bb',
+            name: 'Critical',
+            description: 'Equipment in critical condition',
+          },
+          {
+            server_id: '81256c13-1ed6-478b-9fb1-1fcc699a3f75',
+            name: 'Fair',
+            description: 'Equipment in fair condition',
+          },
+          {
+            server_id: '8d07cd64-f748-4734-ab50-437ddbb0d323',
+            name: 'Good',
+            description: 'Equipment in good condition',
+          },
+          {
+            server_id: 'c58f62af-e748-4076-a343-b8a0e6c57069',
+            name: 'Poor',
+            description: 'Equipment in poor condition',
+          },
+          {
+            server_id: 'dfe6bda1-7037-40de-aeb0-033cbc8168b9',
+            name: 'Excellent',
+            description: 'Equipment in excellent condition',
+          },
+        ];
 
-      for (const e of equipmentData) {
-        await equipmentCollection.create(item => {
-          item.server_id = e.server_id;   // ✅ MOST IMPORTANT
-          item.name = e.name;
-          item.description = e.description;
-          item.createdAt = new Date();
-          item.updatedAt = new Date();
-        });
-      }
-    });
+        for (const e of equipmentData) {
+          await equipmentCollection.create(item => {
+            item.server_id = e.server_id;   // ✅ MOST IMPORTANT
+            item.name = e.name;
+            item.description = e.description;
+            item.createdAt = new Date();
+            item.updatedAt = new Date();
+          });
+        }
+      });
 
-    console.log('✅ Offline equipment seeded with BACKEND IDs');
-  }
-};
+      console.log('✅ Offline equipment seeded with BACKEND IDs');
+    }
+  };
 
 
   // ---------------- FETCH DROPDOWNS ----------------
-const fetchDropdowns = async (
-  setEquipmentConditions: any,
-  setTripStatuses: any
-) => {
-  
+  const fetchDropdowns = async (
+    setEquipmentConditions: any,
+    setTripStatuses: any
+  ) => {
 
-  const online = await isOnline();
-  
 
-  // ----- OFFLINE -----
-  if (!online) {
-    
+    const online = await isOnline();
 
-    try {
-     
-      await seedEquipmentOffline();
 
-     
-      const equipments = await equipmentCollection.query().fetch();
-  
+    // ----- OFFLINE -----
+    if (!online) {
 
-     
-      const statuses = await statusCollection.query().fetch();
-    
 
-      setEquipmentConditions(
-        equipments.map(e => ({
-           id: e.server_id,        // ✅ server UUID
-          name: e.name,
-          description: e.description,
-        }))
-      );
+      try {
 
-      setTripStatuses(
-        statuses.map(s => ({
-          id: s.statusId,      //  backend status id
-          name: s.name,
-        }))
-      );
+        await seedEquipmentOffline();
 
-      
-    } catch (err) {
-     
+
+        const equipments = await equipmentCollection.query().fetch();
+
+
+
+        const statuses = await statusCollection.query().fetch();
+
+
+        setEquipmentConditions(
+          equipments.map(e => ({
+            id: e.server_id,        // ✅ server UUID
+            name: e.name,
+            description: e.description,
+          }))
+        );
+
+        setTripStatuses(
+          statuses.map(s => ({
+            id: s.statusId,      //  backend status id
+            name: s.name,
+          }))
+        );
+
+
+      } catch (err) {
+
+      }
+
+      return;
     }
 
-    return;
-  }
-
-  // ----- ONLINE -----
- 
-
-  try {
-   
-    const equipRes = await api.get<any[]>('/triplog_equipment_conditions');
-    
-   
-    setEquipmentConditions(equipRes || []);
-
-   
-    const statusRes = await api.get<any[]>('/triplog_statuses');
-   
-    setTripStatuses(statusRes || []);
-
-    
-  } catch (err: any) {
-    console.error(
-      "❌ Failed to fetch dropdowns from server:",
-      err?.response?.data || err?.message || err
-    );
-  }
-};
+    // ----- ONLINE -----
 
 
- 
+    try {
+
+      const equipRes = await api.get<any[]>('/triplog_equipment_conditions');
+
+
+      setEquipmentConditions(equipRes || []);
+
+
+      const statusRes = await api.get<any[]>('/triplog_statuses');
+
+      setTripStatuses(statusRes || []);
+
+
+    } catch (err: any) {
+      console.error(
+        "❌ Failed to fetch dropdowns from server:",
+        err?.response?.data || err?.message || err
+      );
+    }
+  };
+
 
 
   const fetchWorkOrders = async () => {
@@ -903,6 +919,15 @@ const fetchDropdowns = async (
     setTechnicianNotes(data.technician_notes ?? "");
 
   }, [data, workOrders]);
+
+  useEffect(() => {
+    if (text) {
+      setRootCause(text);
+    }
+  }, [text]);
+
+
+
 
 
   const headerTitle =
@@ -1309,15 +1334,29 @@ const fetchDropdowns = async (
               </Text>
             </View>
           ) : (
-            <TextInput
-              placeholder="Describe what was actually completed..."
-              style={[styles.input, { height: 80 }]}
-              multiline
-              value={workDescription}
-              onChangeText={setWorkDescription}
-              editable={true}
-            />
-
+            <View style={styles.voiceInputWrapper}>
+              <TextInput
+                placeholder="Describe what was actually completed..."
+                style={[styles.input, { height: 80 }]}
+                multiline
+                value={workDescription}
+                onChangeText={setWorkDescription}
+                editable={true}
+              />
+              <TouchableOpacity
+                style={[
+                  styles.micBtn,
+                  listening && styles.micBtnActive,
+                ]}
+                onPress={listening ? stop : start}
+              >
+                <MaterialIcons
+                  name={listening ? "mic" : "mic-none"}
+                  size={22}
+                  color={listening ? "#fff" : "#000"}
+                />
+              </TouchableOpacity>
+            </View>
           )}
           <View style={styles.row}>
             <View style={styles.col}>
@@ -1380,14 +1419,29 @@ const fetchDropdowns = async (
               </Text>
             </View>
           ) : (
-            <TextInput
-              placeholder="List all parts and materials..."
-              style={[styles.input, { height: 80 }]}
-              multiline
-              value={partsUsed}
-              onChangeText={setPartsUsed}
-              editable={true}
-            />
+            <View style={styles.voiceInputWrapper}>
+              <TextInput
+                placeholder="List all parts and materials..."
+                style={[styles.input, { height: 80 }]}
+                multiline
+                value={partsUsed}
+                onChangeText={setPartsUsed}
+                editable={true}
+              />
+              <TouchableOpacity
+                style={[
+                  styles.micBtn,
+                  listening && styles.micBtnActive,
+                ]}
+                onPress={listening ? stop : start}
+              >
+                <MaterialIcons
+                  name={listening ? "mic" : "mic-none"}
+                  size={22}
+                  color={listening ? "#fff" : "#000"}
+                />
+              </TouchableOpacity>
+            </View>
           )}
         </View>
 
@@ -1395,7 +1449,6 @@ const fetchDropdowns = async (
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>⚠ Issues & Observations</Text>
 
-          <Text style={styles.label}>Root Cause Identified *</Text>
           {mode === "view" ? (
             <View style={styles.readOnlyView}>
               <Text style={styles.readOnlyText}>
@@ -1403,16 +1456,31 @@ const fetchDropdowns = async (
               </Text>
             </View>
           ) : (
-            <TextInput
-              style={styles.textarea}
-              placeholder="What caused the problem..."
-              multiline
-              value={rootCause}
-              onChangeText={setRootCause}
-              editable={true}
-            />
-          )}
+            <View style={styles.voiceInputWrapper}>
+              <TextInput
+                style={styles.textarea}
+                placeholder="What caused the problem..."
+                multiline
+                value={rootCause}
+                onChangeText={setRootCause}
+                editable={true}
+              />
 
+              <TouchableOpacity
+                style={[
+                  styles.micBtn,
+                  listening && styles.micBtnActive,
+                ]}
+                onPress={listening ? stop : start}
+              >
+                <MaterialIcons
+                  name={listening ? "mic" : "mic-none"}
+                  size={22}
+                  color={listening ? "#fff" : "#000"}
+                />
+              </TouchableOpacity>
+            </View>
+          )}
           <Text style={styles.label}>Resolution / Action Taken *</Text>
           {mode === "view" ? (
             <View style={styles.readOnlyView}>
@@ -1421,14 +1489,29 @@ const fetchDropdowns = async (
               </Text>
             </View>
           ) : (
-            <TextInput
-              style={styles.textarea}
-              placeholder="How the issue was resolved..."
-              multiline
-              value={resolutionTaken}
-              onChangeText={setResolutionTaken}
-              editable={true}
-            />
+            <View style={styles.voiceInputWrapper}>
+              <TextInput
+                style={styles.textarea}
+                placeholder="How the issue was resolved..."
+                multiline
+                value={resolutionTaken}
+                onChangeText={setResolutionTaken}
+                editable={true}
+              />
+              <TouchableOpacity
+                style={[
+                  styles.micBtn,
+                  listening && styles.micBtnActive,
+                ]}
+                onPress={listening ? stop : start}
+              >
+                <MaterialIcons
+                  name={listening ? "mic" : "mic-none"}
+                  size={22}
+                  color={listening ? "#fff" : "#000"}
+                />
+              </TouchableOpacity>
+            </View>
           )}
 
           <Text style={styles.label}>Technician Notes / Comments</Text>
@@ -1439,14 +1522,29 @@ const fetchDropdowns = async (
               </Text>
             </View>
           ) : (
-            <TextInput
-              style={styles.textarea}
-              placeholder="Additional observations..."
-              multiline
-              value={technicianNotes}
-              onChangeText={setTechnicianNotes}
-              editable={true}
-            />
+            <View style={styles.voiceInputWrapper}>
+              <TextInput
+                style={styles.textarea}
+                placeholder="Additional observations..."
+                multiline
+                value={technicianNotes}
+                onChangeText={setTechnicianNotes}
+                editable={true}
+              />
+              <TouchableOpacity
+                style={[
+                  styles.micBtn,
+                  listening && styles.micBtnActive,
+                ]}
+                onPress={listening ? stop : start}
+              >
+                <MaterialIcons
+                  name={listening ? "mic" : "mic-none"}
+                  size={22}
+                  color={listening ? "#fff" : "#000"}
+                />
+              </TouchableOpacity>
+            </View>
           )}
 
 
@@ -1648,6 +1746,32 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     fontSize: 16,
   },
+  voiceInputWrapper: {
+    position: "relative",
+  },
+
+
+
+  micBtn: {
+    position: "absolute",
+    right: 10,
+    top: "50%",                // 👈 center
+    transform: [{ translateY: -18 }], // 👈 half of button size
+    backgroundColor: "#eee",
+    padding: 8,
+    borderRadius: 20,
+    zIndex: 10,
+  },
+
+  micBtnActive: {
+    backgroundColor: "#ff4d4f",
+  },
+
+  micText: {
+    fontSize: 18,
+  },
+
+
   btn: {
     backgroundColor: "#008DFF",
     padding: 12,
@@ -1742,15 +1866,14 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   textarea: {
+    minHeight: 90,
     borderWidth: 1,
     borderColor: "#ccc",
-    borderRadius: 6,
+    borderRadius: 8,
     padding: 10,
-    minHeight: 80,
-    backgroundColor: "#f8f8f8",
-    marginBottom: 15,
+    paddingRight: 50,          // 👈 mic space
+    textAlignVertical: "top",  // multiline fix
   },
-
   readOnlyInput: {
 
     paddingHorizontal: 12,
