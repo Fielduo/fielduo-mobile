@@ -16,7 +16,8 @@ import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/Search
 import { api } from "@/src/api/cilent";
 import FilterModal, { AppliedFilter } from "@/components/common/FilterModal";
 import { Ionicons } from "@expo/vector-icons";
-import { fetchTrips, fetchTripStatusesFromAPI } from "@/src/api/auth";
+import { fetchTrips, fetchTripStatusesFromAPI } from "@/database/local/triplog";
+
 
 
 type Trip = {
@@ -66,7 +67,7 @@ export default function TripLog() {
         setTrips(normalizedTrips);
         setOfflineMode(res.offline);
       } catch (err) {
-        console.log("Trip load error:", err);
+       
         setTrips([]);
         setOfflineMode(true);
       } finally {
