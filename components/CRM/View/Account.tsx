@@ -123,7 +123,9 @@ export default function AccountsScreen() {
           <View>
             <Text style={styles.crmText}>CRM</Text>
             <Text style={styles.pageTitle}>Accounts</Text>
-            <Text style={styles.subTitle}>Updated just now</Text>
+            <Text style={styles.subTitle}>
+              {accounts.length} items - Updated just now
+            </Text>
           </View>
 
           <View style={{ position: "relative" }}>
@@ -179,17 +181,6 @@ export default function AccountsScreen() {
                     <Text style={styles.label}>Account Name</Text>
                     <Text style={styles.value}>{acc.name}</Text>
                   </View>
-
-                  <TouchableOpacity
-                    onPress={() =>
-                      navigation.navigate("CreateAccount", {
-                        mode: "edit",
-                        account: acc,
-                      })
-                    }
-                  >
-                    <Ionicons name="pencil-outline" size={18} color="#6234E2" />
-                  </TouchableOpacity>
 
                   <View style={styles.col}>
                     <Text style={styles.label}>Status</Text>
