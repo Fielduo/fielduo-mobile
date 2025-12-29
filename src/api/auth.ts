@@ -1,15 +1,11 @@
-import NetInfo from '@react-native-community/netinfo';
-import User from '@/database/models/User';
-import { api } from './cilent';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { database } from '@/database';
-import { FieldWorker, FieldWorkerTrip, UserProfile, Vehicle, VehiclePayload } from '@/types/Worker';
 import { CustomerFeedback } from '@/components/Billing/View/CustomerFeedback';
 import { Payment } from '@/components/Billing/View/Payments';
-import { Q } from '@nozbe/watermelondb';
-import Trip from '@/database/models/Triplog';
-import TripStatus from '@/database/models/TripStatus';
-import { v4 as uuidv4 } from "uuid";
+import { database } from '@/database';
+import User from '@/database/models/User';
+import { FieldWorker, FieldWorkerTrip, UserProfile, Vehicle, VehiclePayload } from '@/types/Worker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
+import { api } from './cilent';
 
 interface SignupResponse { success: boolean; message?: string }
 
@@ -488,7 +484,7 @@ export const customerFeedbackService = {
     rating: number;
     comments?: string;
   }): Promise<CustomerFeedback> => {
-    return api.post<CustomerFeedback>("/customer-feedback", payload);
+    return api.post<CustomerFeedback>("/customer_feedback", payload);
   },
 
   update: async (
@@ -499,11 +495,11 @@ export const customerFeedbackService = {
       comments?: string;
     }
   ): Promise<CustomerFeedback> => {
-    return api.put<CustomerFeedback>(`/customer-feedback/${id}`, payload);
+    return api.put<CustomerFeedback>(`/customer_feedback/${id}`, payload);
   },
 
   delete: async (id: string): Promise<{ message: string }> => {
-    return api.delete<{ message: string }>(`/customer-feedback/${id}`);
+    return api.delete<{ message: string }>(`/customer_feedback/${id}`);
   },
 };
 

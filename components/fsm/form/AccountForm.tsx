@@ -130,7 +130,7 @@ export default function CreateAccountScreen() {
           )}
         </View>
 
-        <Text style={styles.errorText}>Account Name is Required</Text>
+        {/*<Text style={styles.errorText}>Account Name is Required</Text>*/}
 
         {/* Account Name */}
         <Text style={styles.label}>Account Name *</Text>

@@ -1,20 +1,20 @@
-import React, { useEffect, useState } from "react";
+import FilterModal, { AppliedFilter } from "@/components/common/FilterModal";
+import { customerFeedbackService } from "@/src/api/auth";
+import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
+import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import React, { useEffect, useMemo, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  FlatList,
   Alert,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import Header from "../../common/Header";
 import HeaderSection from "../../common/HeaderSection";
-import { useNavigation } from "@react-navigation/native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
-import { customerFeedbackService } from "@/src/api/auth";
-import FilterModal, { AppliedFilter } from "@/components/common/FilterModal";
-
 
 // --- Types ---
 export interface CustomerFeedback {
@@ -29,19 +29,26 @@ export interface CustomerFeedback {
   updated_by_name?: string;
 }
 
-
 // --- Main Component ---
 const CustomerFeedback: React.FC = () => {
   const [feedbacks, setFeedbacks] = useState<CustomerFeedback[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-const [filterVisible, setFilterVisible] = useState(false);
-const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(null);
+  const [filterVisible, setFilterVisible] = useState(false);
+  const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(
+    null
+  );
   const navigation =
     useNavigation<NativeStackNavigationProp<SearchMenuStackParamList>>();
 
   useEffect(() => {
     fetchFeedbacks();
   }, []);
+
+  type ViewMode = "all" | "recent";
+
+  const [viewMode, setViewMode] = useState<ViewMode>("all");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [recentViewedIds, setRecentViewedIds] = useState<string[]>([]);
 
   const fetchFeedbacks = async () => {
     try {
@@ -57,13 +64,20 @@ const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(null);
   };
 
   const handleCreateNewFeedback = () => {
-    // navigation.navigate("CreateCustomerFeedback");
-    console.log("Create new customer feedback");
+    navigation.navigate("CreateCustomerFeedback", {
+      mode: "create",
+    });
   };
 
   const handleFeedbackCardPress = (fb: CustomerFeedback) => {
-    // navigation.navigate("CustomerFeedbackDetails", { id: fb.id });
-    console.log("Pressed feedback:", fb.id);
+    setRecentViewedIds((prev) =>
+      prev.includes(fb.id) ? prev : [fb.id, ...prev].slice(0, 10)
+    );
+
+    navigation.navigate("CreateCustomerFeedback", {
+      mode: "view",
+      feedback: fb,
+    });
   };
 
   // ⭐ helper: show rating as stars
@@ -109,11 +123,7 @@ const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(null);
           <View style={styles.row}>
             <View style={styles.col}>
               <Text style={styles.label}>Comments</Text>
-              <Text
-                style={styles.value}
-                numberOfLines={2}
-                ellipsizeMode="tail"
-              >
+              <Text style={styles.value} numberOfLines={2} ellipsizeMode="tail">
                 {item.comments || "-"}
               </Text>
             </View>
@@ -134,7 +144,6 @@ const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(null);
             <View style={styles.col}>
               <Text style={styles.label}>Created By</Text>
               <Text style={styles.value}>{item.created_by_name}</Text>
-
             </View>
           </View>
 
@@ -156,50 +165,55 @@ const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(null);
             <View style={styles.col}>
               <Text style={styles.label}>Updated By</Text>
               <Text style={styles.value}>{item.updated_by_name || "-"}</Text>
-
             </View>
-
-
 
             {/* EMPTY COL TO MATCH 3-COLUMN LAYOUT */}
             <View style={styles.col}>
               {/* keep it empty so spacing matches other rows */}
             </View>
           </View>
-
         </View>
       </TouchableOpacity>
     );
   };
 
   const applyLocalFilter = (filter: AppliedFilter) => {
-  const { field, operator, value } = filter;
+    setAppliedFilter(filter);
+  };
 
-  const filtered = feedbacks.filter((item: any) => {
-    const fieldValue = item[field];
+  const filteredFeedbacks = useMemo(() => {
+    let data = feedbacks;
 
-    if (fieldValue == null) return false;
-
-    switch (operator) {
-      case 'equals':
-        return String(fieldValue).toLowerCase() === value.toLowerCase();
-
-      case 'contains':
-        return String(fieldValue).toLowerCase().includes(value.toLowerCase());
-
-      case 'greater_than':
-        return Number(fieldValue) > Number(value);
-
-      case 'less_than':
-        return Number(fieldValue) < Number(value);
-
-      default:
-        return true;
+    if (viewMode === "recent") {
+      data = data.filter((fb) => recentViewedIds.includes(fb.id));
     }
-  });
 
-  setFeedbacks(filtered);
-};
+    if (!appliedFilter) return data;
+
+    const { field, operator, value } = appliedFilter;
+
+    return data.filter((fb: any) => {
+      const fieldValue = fb[field];
+      if (fieldValue == null) return false;
+
+      switch (operator) {
+        case "equals":
+          return String(fieldValue).toLowerCase() === value.toLowerCase();
+
+        case "contains":
+          return String(fieldValue).toLowerCase().includes(value.toLowerCase());
+
+        case "greater_than":
+          return Number(fieldValue) > Number(value);
+
+        case "less_than":
+          return Number(fieldValue) < Number(value);
+
+        default:
+          return true;
+      }
+    });
+  }, [feedbacks, appliedFilter, viewMode, recentViewedIds]);
 
   return (
     <View style={{ flex: 1, backgroundColor: "#FFF" }}>
@@ -209,35 +223,79 @@ const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(null);
         title="What services do you need?"
         buttonText="+ New Feedback"
         onButtonClick={handleCreateNewFeedback}
-       onSearchPress={() => setFilterVisible(true)}   //  ADD
+        onSearchPress={() => setFilterVisible(true)} //  ADD
       />
 
       {/* Section Header */}
+      {/* Section Header */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.subTitle}>FSM</Text>
-        <Text style={styles.title}>Customer Feedback</Text>
-        <Text style={styles.subtitle}>
-          {loading ? "Loading..." : "Updated just now"}
-        </Text>
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.subTitle}>FSM</Text>
+            <Text style={styles.title}>Customer Feedback</Text>
+            <Text style={styles.subtitle}>
+              {loading ? "Loading..." : "Updated just now"}
+            </Text>
+          </View>
+
+          {/* Dropdown button */}
+          <View style={{ position: "relative" }}>
+            <TouchableOpacity
+              style={styles.filterBtn}
+              onPress={() => setDropdownOpen((p) => !p)}
+            >
+              <Text style={styles.filterText}>
+                {viewMode === "all" ? "All" : "Recently Viewed"}
+              </Text>
+              <Ionicons name="chevron-down-outline" size={16} color="#444" />
+            </TouchableOpacity>
+
+            {dropdownOpen && (
+              <View style={styles.dropdown}>
+                <TouchableOpacity
+                  style={styles.dropdownItem}
+                  onPress={() => {
+                    setViewMode("all");
+                    setDropdownOpen(false);
+                  }}
+                >
+                  <Text>All</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.dropdownItem}
+                  onPress={() => {
+                    setViewMode("recent");
+                    setDropdownOpen(false);
+                  }}
+                >
+                  <Text>Recently Viewed</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
       </View>
+
+      {/* Cards */}
 
       {/* List */}
       <FlatList
-        data={feedbacks}
+        data={filteredFeedbacks}
         keyExtractor={(item) => item.id}
         renderItem={renderFeedbackCard}
-        contentContainerStyle={{ padding: 12 }}
+        contentContainerStyle={{ padding: 12, paddingBottom: 80 }}
+        showsVerticalScrollIndicator={false}
       />
       <FilterModal
-  visible={filterVisible}
-  module="customer_feedback"   // ✅ IMPORTANT
-  onClose={() => setFilterVisible(false)}
-  onApply={(filter) => {
-    setAppliedFilter(filter);
-    applyLocalFilter(filter);
-  }}
-/>
-
+        visible={filterVisible}
+        module="customer_feedback" // ✅ IMPORTANT
+        onClose={() => setFilterVisible(false)}
+        onApply={(filter) => {
+          setAppliedFilter(filter);
+          applyLocalFilter(filter);
+        }}
+      />
     </View>
   );
 };
@@ -249,6 +307,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 10,
     backgroundColor: "#FFF",
+  },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
   },
   subTitle: {
     color: "#6234E2",
@@ -266,9 +329,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   card: {
+    width: "100%", // 🔥 IMPORTANT
     borderWidth: 1,
-    borderColor: "#C4B5FD",
-    borderRadius: 10,
+    borderColor: "#53535180",
+    borderRadius: 12,
     padding: 16,
     backgroundColor: "#FFFFFF",
     shadowColor: "#000",
@@ -326,4 +390,39 @@ const styles = StyleSheet.create({
   mediumText: { color: "#b58b00" },
   low: { backgroundColor: "#d8fff2" },
   lowText: { color: "#00a676" },
+  filterBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    height: 36,
+    minWidth: 170,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 6,
+    backgroundColor: "#fff",
+  },
+  filterText: {
+    fontSize: 14,
+    marginRight: 6,
+    color: "#6C3EB5",
+    fontWeight: "700",
+  },
+  dropdown: {
+    position: "absolute",
+    top: 40,
+    right: 0,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 8,
+    width: 160,
+    zIndex: 999,
+    elevation: 4,
+  },
+  dropdownItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
 });
