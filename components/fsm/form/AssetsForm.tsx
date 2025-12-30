@@ -22,6 +22,9 @@ import { api } from '@/src/api/cilent';
 import { searchContacts } from '@/src/api/searchContacts';
 import { Asset } from '@/types/Worker';
 import { validateAsset } from '@/store/assetValidator';
+import { CameraView, useCameraPermissions } from "expo-camera";
+
+
 
 
 type CreateAssetRouteProp = RouteProp<SearchMenuStackParamList, 'CreateAsset'>;
@@ -70,7 +73,17 @@ export default function CreateAssetScreen() {
   const [updatedAt, setUpdatedAt] = useState('');
 
   const token = useAuthStore.getState().token;
-  console.log('🔑 Token being sent:', token);
+
+  const [scannerVisible, setScannerVisible] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
+  const [activeScanField, setActiveScanField] = useState<"giai" | "assetNumber" | null>(null);
+
+  useEffect(() => {
+    if (!permission?.granted) {
+      requestPermission();
+    }
+  }, []);
+
 
   // ---------------- Load Asset for Edit/View ----------------
   useEffect(() => {
@@ -147,6 +160,37 @@ export default function CreateAssetScreen() {
     }
   };
 
+  const handleQRScanned = ({ data }: { data: string }) => {
+    console.log("🔳 Scanned:", data);
+
+    let scannedValue = data;
+
+    try {
+      // QR may contain JSON
+      const parsed = JSON.parse(data);
+
+      if (parsed.giai) {
+        scannedValue = parsed.giai;
+      } else if (parsed.assetNumber) {
+        scannedValue = parsed.assetNumber;
+      }
+    } catch (error) {
+      // Normal barcode → keep raw data
+      scannedValue = data;
+    }
+
+    // 🔁 Assign to correct field
+    if (activeScanField === "giai") {
+      setGiai(scannedValue);
+    } else if (activeScanField === "assetNumber") {
+      setAssetNumber(scannedValue);
+    }
+
+    setScannerVisible(false);
+    setActiveScanField(null);
+  };
+
+
 
   const renderDatePicker = (
     label: string,
@@ -222,9 +266,35 @@ export default function CreateAssetScreen() {
       />
 
       <ScrollView style={{ padding: 16 }}>
+        {scannerVisible && (
+          <View style={styles.cameraOverlay}>
+            <CameraView
+              style={StyleSheet.absoluteFillObject}
+              barcodeScannerSettings={{
+                barcodeTypes: ["qr", "code128", "ean13", "ean8"], //  QR + BARCODE
+              }}
+              onBarcodeScanned={handleQRScanned}
+            />
+
+            {/* Close button */}
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setScannerVisible(false)}
+            >
+              <Ionicons name="close" size={26} color="#fff" />
+            </TouchableOpacity>
+
+            {/* Scan frame */}
+            <View style={styles.scanFrame} />
+          </View>
+        )}
+
         {/* Section Header */}
+
+
         <View style={styles.headerRow}>
           <Text style={styles.subHeader}>ASSET DETAILS</Text>
+        
           {isViewMode && (
             <TouchableOpacity
               style={styles.editSmallButton}
@@ -240,6 +310,7 @@ export default function CreateAssetScreen() {
             </TouchableOpacity>
           )}
         </View>
+
 
         <View style={styles.row}>
           <View style={styles.column}>
@@ -264,20 +335,32 @@ export default function CreateAssetScreen() {
 
           <View style={styles.column}>
             <Text style={styles.label}>Asset Number</Text>
+
             {isViewMode ? (
               <View style={styles.readOnlyView}>
                 <Text style={styles.readOnlyText}>{assetNumber || "-"}</Text>
               </View>
             ) : (
-              <TextInput
-                style={[styles.input, isViewMode && styles.readOnly]}
-                placeholder="Enter asset number"
-                value={assetNumber}
-                editable={!isViewMode}
-                onChangeText={setAssetNumber}
-              />
+              <View style={styles.inputWithIcon}>
+                <TextInput
+                  style={styles.inputFlex}
+                  placeholder="Enter asset number"
+                  value={assetNumber}
+                  onChangeText={setAssetNumber}
+                />
+
+                <TouchableOpacity
+                  onPress={() => {
+                    setActiveScanField("assetNumber");
+                    setScannerVisible(true);
+                  }}
+                >
+                  <Ionicons name="qr-code-outline" size={22} color="#6234E2" />
+                </TouchableOpacity>
+              </View>
             )}
           </View>
+
         </View>
 
         <Text style={styles.label}>Description</Text>
@@ -334,20 +417,32 @@ export default function CreateAssetScreen() {
         <View style={styles.row}>
           <View style={styles.column}>
             <Text style={styles.label}>GIAI</Text>
+
             {isViewMode ? (
               <View style={styles.readOnlyView}>
                 <Text style={styles.readOnlyText}>{giai || "-"}</Text>
               </View>
             ) : (
-              <TextInput
-                style={[styles.input, isViewMode && styles.readOnly]}
-                placeholder="Enter GIAI"
-                value={giai}
-                editable={!isViewMode}
-                onChangeText={setGiai}
-              />
+              <View style={styles.inputWithIcon}>
+                <TextInput
+                  style={styles.inputFlex}
+                  placeholder="Enter GIAI"
+                  value={giai}
+                  onChangeText={setGiai}
+                />
+
+                <TouchableOpacity
+                  onPress={() => {
+                    setActiveScanField("giai");
+                    setScannerVisible(true);
+                  }}
+                >
+                  <Ionicons name="qr-code-outline" size={22} color="#6234E2" />
+                </TouchableOpacity>
+              </View>
             )}
           </View>
+
           <View style={styles.column}>
             <Text style={styles.label}>Asset Type</Text>
             {isViewMode ? (
@@ -682,4 +777,43 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#111",
   },
+  cameraOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#000",
+    zIndex: 999,
+  },
+
+  closeButton: {
+    position: "absolute",
+    top: 50,
+    right: 20,
+    zIndex: 10,
+  },
+
+  scanFrame: {
+    position: "absolute",
+    top: "30%",
+    left: "10%",
+    right: "10%",
+    height: 220,
+    borderWidth: 2,
+    borderColor: "#00FF9C",
+    borderRadius: 12,
+  },
+  inputWithIcon: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: '#E5E5E5',
+    borderColor: '#535351B2',
+    borderWidth: 0.5,
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    height: 45,
+  },
+
+  inputFlex: {
+    flex: 1,
+    paddingVertical: 10,
+  },
+
 });
