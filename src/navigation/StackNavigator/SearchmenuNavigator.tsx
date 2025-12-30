@@ -3,7 +3,7 @@ import SearchMenu from "@/components/report-analysis/search-menu";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import React from "react";
 
-import AccountForm from "@/components/fsm/form/AccountForm";
+import AccountForm from "@/components/CRM/Form/AccountForm";
 import AssetsForm from "@/components/fsm/form/AssetsForm";
 import CreateFieldWorkerTrip from "@/components/fsm/form/FieldWorkerTripForm";
 import TripLogForm from "@/components/fsm/form/TripLogForm";
@@ -21,6 +21,7 @@ import {
 import InvoicesForm from "@/components/Billing/Form/InvoiceForm";
 import QuotesForm from "@/components/Billing/Form/QuotesForm";
 import CustomerFeedback from "@/components/Billing/View/CustomerFeedback";
+import CustomerFeedbackForm from "@/components/Billing/Form/CustomerFeedbackForm";
 import Invoices from "@/components/Billing/View/Invoices";
 import Payments from "@/components/Billing/View/Payments";
 import Quotes from "@/components/Billing/View/Quotes";
@@ -100,7 +101,10 @@ export type SearchMenuStackParamList = {
   //   // Billing
   Invoices: undefined;
   InvoicesForm: { mode: "create" | "view" | "edit"; data?: any };
-  CustomerFeedback: { mode: "create" | "view" | "edit"; data?: any };
+
+  CustomerFeedback: undefined;
+  CreateCustomerFeedback: { mode: "create" | "view" | "edit"; feedback?: any };
+  
   Payments: { mode: "create" | "view" | "edit"; data?: any };
   MapRouteScreen: {
     jobs: JobSchedule[];
@@ -173,6 +177,7 @@ export default function SearchmenuNavigator() {
       <Stack.Screen name="InvoicesForm" component={InvoicesForm} />
 
       <Stack.Screen name="CustomerFeedback" component={CustomerFeedback} />
+      <Stack.Screen name="CreateCustomerFeedback" component={CustomerFeedbackForm} />
       <Stack.Screen name="Payments" component={Payments} />
       <Stack.Screen name="Quotes" component={Quotes} />
       <Stack.Screen name="QuotesForm" component={QuotesForm} />
