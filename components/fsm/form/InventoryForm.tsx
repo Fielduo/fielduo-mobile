@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useRef } from "react";
+
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -22,7 +24,7 @@ import { api } from "@/src/api/cilent";
 import { Ionicons } from "@expo/vector-icons";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 import { Asset } from "@/types/Worker";
-
+import { CameraView, useCameraPermissions } from "expo-camera";
 
 type CreateInventoryRouteProp = RouteProp<
   SearchMenuStackParamList,
@@ -33,10 +35,7 @@ const CreateInventoryForm: React.FC = () => {
   const navigation =
     useNavigation<NativeStackNavigationProp<SearchMenuStackParamList>>();
   const route = useRoute<CreateInventoryRouteProp>();
-  const { mode = 'create', inventory } = route.params || {} as {
-    mode?: string;
-    asset?: Asset
-  };
+  const { mode = "create", inventory } = route.params ?? {};
 
 
   const isCreateMode = mode === "create";
@@ -75,7 +74,37 @@ const CreateInventoryForm: React.FC = () => {
   const [barcode, setBarcode] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [isEditable] = useState(isCreateMode || isEditMode);
+  const [scannerVisible, setScannerVisible] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
 
+  const handleQRScanned = ({ data }: { data: string }) => {
+    console.log("🔳 Scanned:", data);
+
+    try {
+      // QR code JSON irundhaa
+      const parsed = JSON.parse(data);
+
+      if (parsed.barcode) {
+        setBarcode(parsed.barcode); // ✅ barcode field
+      }
+
+      if (parsed.itemNumber) {
+        setItemNumber(parsed.itemNumber); // optional
+      }
+
+    } catch {
+      // 🔹 Normal barcode (EAN / CODE128 etc)
+      setBarcode(data); // ✅ direct-a barcode field fill
+    }
+
+    setScannerVisible(false);
+  };
+
+  useEffect(() => {
+    if (!permission?.granted) {
+      requestPermission();
+    }
+  }, []);
 
   // useEffect to populate fields in edit/view mode
   useEffect(() => {
@@ -184,7 +213,31 @@ const CreateInventoryForm: React.FC = () => {
 
       <ScrollView style={styles.container}>
         {/* Section Header */}
+        {scannerVisible && (
+          <View style={styles.cameraOverlay}>
+            <CameraView
+              style={StyleSheet.absoluteFillObject}
+              barcodeScannerSettings={{
+                barcodeTypes: ["qr", "code128", "ean13", "ean8"], //  QR + BARCODE
+              }}
+              onBarcodeScanned={handleQRScanned}
+            />
+
+            {/* Close button */}
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setScannerVisible(false)}
+            >
+              <Ionicons name="close" size={26} color="#fff" />
+            </TouchableOpacity>
+
+            {/* Scan frame */}
+            <View style={styles.scanFrame} />
+          </View>
+        )}
+
         <View style={styles.headerRow}>
+
           <Text style={styles.subHeader}>Inventory</Text>
           {isViewMode && (
             <TouchableOpacity
@@ -466,19 +519,31 @@ const CreateInventoryForm: React.FC = () => {
         <View style={styles.row}>
           <View style={styles.column}>
             <Text style={styles.label}>Barcode</Text>
+
             {isViewMode ? (
               <View style={styles.readOnlyView}>
                 <Text style={styles.readOnlyText}>{barcode || "-"}</Text>
               </View>
             ) : (
-              <TextInput style={styles.input}
-                placeholder="Enter barcode"
-                value={barcode}
-                onChangeText={setBarcode}
-                editable={!isViewMode}
-              />
+              <View style={styles.inputWithIcon}>
+                <TextInput
+                  style={styles.inputFlex}
+                  placeholder="Enter barcode"
+                  value={barcode}
+                  onChangeText={setBarcode}
+                  editable={!isViewMode}
+                />
+
+                <TouchableOpacity
+                  onPress={() => setScannerVisible(true)}
+                  style={styles.iconButton}
+                >
+                  <Ionicons name="qr-code-outline" size={22} color="#6234E2" />
+                </TouchableOpacity>
+              </View>
             )}
           </View>
+
           <View style={styles.column}>
             {isViewMode ? (
               <View style={styles.readOnlyView}>
@@ -614,7 +679,7 @@ const CreateInventoryForm: React.FC = () => {
           {(isCreateMode || isEditMode) && (
             <TouchableOpacity style={styles.saveButton} onPress={handleSubmit}>
               <Text style={styles.buttonText}>
-                {isCreateMode ? "Save Asset" : "Update Asset"}
+                {isCreateMode ? "Save Inventory" : "Update Inventory"}
               </Text>
             </TouchableOpacity>
           )}
@@ -792,6 +857,47 @@ const styles = StyleSheet.create({
   readOnlyText: {
     fontSize: 12,
     color: "#101318CC",
+  },
+  cameraOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#000",
+    zIndex: 999,
+  },
+
+  closeButton: {
+    position: "absolute",
+    top: 50,
+    right: 20,
+    zIndex: 10,
+  },
+
+  scanFrame: {
+    position: "absolute",
+    top: "30%",
+    left: "10%",
+    right: "10%",
+    height: 220,
+    borderWidth: 2,
+    borderColor: "#00FF9C",
+    borderRadius: 12,
+  },
+  inputWithIcon: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    backgroundColor: "#fff",
+  },
+
+  inputFlex: {
+    flex: 1,
+    height: 44,
+  },
+
+  iconButton: {
+    paddingLeft: 10,
   },
 
 });

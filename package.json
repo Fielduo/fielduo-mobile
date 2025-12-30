@@ -25,6 +25,7 @@
     "@rnmapbox/maps": "^10.2.10",
     "axios": "^1.13.2",
     "expo": "~54.0.25",
+    "expo-camera": "~17.0.10",
     "expo-checkbox": "~5.0.8",
     "expo-constants": "~18.0.10",
     "expo-document-picker": "~14.0.8",
