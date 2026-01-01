@@ -14,6 +14,7 @@ export interface WorkOrderSearchResult {
 }
 
 
+
 export const searchUsers = async (query: string): Promise<SearchResult[]> => {
   if (!query.trim() || query.length < 2) return [];
   try {
@@ -76,3 +77,21 @@ export const searchWorkOrders = async (
     return [];
   }
 };
+
+export const searchCustomersForPayment = async (
+  query: string
+): Promise<SearchResult[]> => {
+  if (!query.trim() || query.length < 2) return [];
+
+  try {
+    return await api.get<SearchResult[]>(
+      `/accounts/search?q=${encodeURIComponent(query)}`
+    );
+  } catch (error) {
+    console.error("Error searching customers:", error);
+    return [];
+  }
+};
+
+
+
