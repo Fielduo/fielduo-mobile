@@ -186,7 +186,12 @@ export default function TripLogForm() {
   const [timeOnSite, setTimeOnSite] = useState("");
   const [partsUsed, setPartsUsed] = useState("");
   const [documentFiles, setDocumentFiles] = useState<any[]>([]);
+  const [activeField, setActiveField] = useState<
+    "rootCause" | "resolution" | "notes" | "parts" | "work" | null
+  >(null);
+
   const { text, start, stop, listening } = useVoiceToText();
+
 
   const [rootCause, setRootCause] = useState("");
   const [resolutionTaken, setResolutionTaken] = useState("");
@@ -921,8 +926,28 @@ export default function TripLogForm() {
   }, [data, workOrders]);
 
   useEffect(() => {
-    if (text) {
-      setRootCause(text);
+    if (!text || !activeField) return;
+
+    switch (activeField) {
+      case "work":
+        setWorkDescription(prev => prev ? prev + " " + text : text);
+        break;
+
+      case "parts":
+        setPartsUsed(prev => prev ? prev + " " + text : text);
+        break;
+
+      case "rootCause":
+        setRootCause(prev => prev ? prev + " " + text : text);
+        break;
+
+      case "resolution":
+        setResolutionTaken(prev => prev ? prev + " " + text : text);
+        break;
+
+      case "notes":
+        setTechnicianNotes(prev => prev ? prev + " " + text : text);
+        break;
     }
   }, [text]);
 
@@ -986,7 +1011,7 @@ export default function TripLogForm() {
 
         {/* Core Trip Information */}
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>📄 Core Trip Information</Text>
+          <Text style={styles.sectionTitle}> Core Trip Information</Text>
 
           <View style={styles.row}>
             {/* Date */}
@@ -1195,7 +1220,7 @@ export default function TripLogForm() {
 
         {/* Location & Travel Info */}
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>📍 Location & Travel Information</Text>
+          <Text style={styles.sectionTitle}> Location & Travel Information</Text>
 
           <View style={styles.row}>
             <View style={styles.col}>
@@ -1324,7 +1349,7 @@ export default function TripLogForm() {
         {/* Work Performed Details */}
         <View style={styles.card}>
 
-          <Text style={styles.sectionTitle}>🛠️ Work Performed Details</Text>
+          <Text style={styles.sectionTitle}> Work Performed Details</Text>
 
           <Text style={styles.label}>Actual Work Description *</Text>
           {mode === "view" ? (
@@ -1346,15 +1371,21 @@ export default function TripLogForm() {
               <TouchableOpacity
                 style={[
                   styles.micBtn,
-                  listening && styles.micBtnActive,
+                  listening && activeField === "work" && styles.micBtnActive,
+
                 ]}
-                onPress={listening ? stop : start}
+                onPress={() => {
+                  setActiveField("work");
+                  listening ? stop() : start();
+                }}
+
               >
                 <MaterialIcons
-                  name={listening ? "mic" : "mic-none"}
+                  name={listening && activeField === "work" ? "mic" : "mic-none"}
                   size={22}
-                  color={listening ? "#fff" : "#000"}
+                  color={listening && activeField === "work" ? "#fff" : "#000"}
                 />
+
               </TouchableOpacity>
             </View>
           )}
@@ -1431,15 +1462,20 @@ export default function TripLogForm() {
               <TouchableOpacity
                 style={[
                   styles.micBtn,
-                  listening && styles.micBtnActive,
+                  listening && activeField === "parts" && styles.micBtnActive,
                 ]}
-                onPress={listening ? stop : start}
+                onPress={() => {
+                  setActiveField("parts");
+                  listening ? stop() : start();
+                }}
+
               >
                 <MaterialIcons
-                  name={listening ? "mic" : "mic-none"}
+                  name={listening && activeField === "parts" ? "mic" : "mic-none"}
                   size={22}
-                  color={listening ? "#fff" : "#000"}
+                  color={listening && activeField === "parts" ? "#fff" : "#000"}
                 />
+
               </TouchableOpacity>
             </View>
           )}
@@ -1447,7 +1483,7 @@ export default function TripLogForm() {
 
         {/* Issues & Observations */}
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>⚠ Issues & Observations</Text>
+          <Text style={styles.sectionTitle}> Issues & Observations</Text>
 
           {mode === "view" ? (
             <View style={styles.readOnlyView}>
@@ -1469,15 +1505,20 @@ export default function TripLogForm() {
               <TouchableOpacity
                 style={[
                   styles.micBtn,
-                  listening && styles.micBtnActive,
+                  listening && activeField === "rootCause" && styles.micBtnActive,
                 ]}
-                onPress={listening ? stop : start}
+                onPress={() => {
+                  setActiveField("rootCause");
+                  listening ? stop() : start();
+                }}
               >
+
                 <MaterialIcons
-                  name={listening ? "mic" : "mic-none"}
+                  name={listening && activeField === "rootCause" ? "mic" : "mic-none"}
                   size={22}
-                  color={listening ? "#fff" : "#000"}
+                  color={listening && activeField === "rootCause" ? "#fff" : "#000"}
                 />
+
               </TouchableOpacity>
             </View>
           )}
@@ -1501,15 +1542,20 @@ export default function TripLogForm() {
               <TouchableOpacity
                 style={[
                   styles.micBtn,
-                  listening && styles.micBtnActive,
+                  listening && activeField === "resolution" && styles.micBtnActive,
                 ]}
-                onPress={listening ? stop : start}
+                onPress={() => {
+                  setActiveField("resolution");
+                  listening ? stop() : start();
+                }}
               >
+
                 <MaterialIcons
-                  name={listening ? "mic" : "mic-none"}
+                  name={listening && activeField === "resolution" ? "mic" : "mic-none"}
                   size={22}
-                  color={listening ? "#fff" : "#000"}
+                  color={listening && activeField === "resolution" ? "#fff" : "#000"}
                 />
+
               </TouchableOpacity>
             </View>
           )}
@@ -1533,16 +1579,23 @@ export default function TripLogForm() {
               />
               <TouchableOpacity
                 style={[
+
                   styles.micBtn,
-                  listening && styles.micBtnActive,
+                  listening && activeField === "notes" && styles.micBtnActive,
                 ]}
-                onPress={listening ? stop : start}
+
+                onPress={() => {
+                  setActiveField("notes");
+                  listening ? stop() : start();
+                }}
+
               >
                 <MaterialIcons
-                  name={listening ? "mic" : "mic-none"}
+                  name={listening && activeField === "notes" ? "mic" : "mic-none"}
                   size={22}
-                  color={listening ? "#fff" : "#000"}
+                  color={listening && activeField === "notes" ? "#fff" : "#000"}
                 />
+
               </TouchableOpacity>
             </View>
           )}
@@ -1581,7 +1634,7 @@ export default function TripLogForm() {
 
         {/* Documentation */}
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>📸  Documentation</Text>
+          <Text style={styles.sectionTitle}>  Documentation</Text>
 
           {/* BEFORE PHOTO */}
           <View style={styles.block}>
@@ -1631,7 +1684,7 @@ export default function TripLogForm() {
 
           {/* DOCUMENTATION */}
           <View style={styles.block}>
-            <Text style={styles.blockTitle}>📄 Additional Attachments</Text>
+            <Text style={styles.blockTitle}> Additional Attachments</Text>
 
             {/* Upload button only in edit/create mode */}
             {mode !== "view" && (
