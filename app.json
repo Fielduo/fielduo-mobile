@@ -8,7 +8,7 @@
     "scheme": "fielduomobile",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/images/Spalsh.png",
+      "image": "./assets/images/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -31,7 +31,8 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "ACCESS_BACKGROUND_LOCATION",
-        "FOREGROUND_SERVICE"
+        "FOREGROUND_SERVICE",
+        "android.permission.RECORD_AUDIO"
       ],
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
@@ -43,12 +44,11 @@
     "plugins": [
       "expo-sqlite",
       "expo-speech-recognition"
-      
     ],
     "extra": {
       "MAPBOX_ACCESS_TOKEN": "pk.eyJ1Ijoia2lydXRoaWdhbmUiLCJhIjoiY21oYXJyeXdqMWozZjJsczV5dDlycnd5NyJ9.Bk5zF4AQxBeWBJjHux3UHQ",
       "eas": {
-        "projectId": "b56e2ae2-0117-43ef-9e4b-11cf4d4c96d2"
+        "projectId": "ae17c76e-4467-4ebe-91a6-a0f006ff0a7d"
       }
     }
   }
