@@ -17,6 +17,10 @@
       "bundleIdentifier": "com.santhiyak.fielduomobile",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "Location is required to track field work",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Location is required for background tracking",
+        "NSCameraUsageDescription": "Camera access is required",
+        "NSPhotoLibraryUsageDescription": "Photo access is required",
         "NSMicrophoneUsageDescription": "Voice to text conversion",
         "NSSpeechRecognitionUsageDescription": "Voice to text conversion"
       }
@@ -31,7 +35,8 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "ACCESS_BACKGROUND_LOCATION",
-        "FOREGROUND_SERVICE"
+        "FOREGROUND_SERVICE",
+        "android.permission.RECORD_AUDIO"
       ],
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
@@ -42,13 +47,18 @@
     },
     "plugins": [
       "expo-sqlite",
-      "expo-speech-recognition"
-      
+      "expo-speech-recognition",
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMapboxMapsDownloadToken": "sk.eyJ1Ijoia2lydXRoaWdhbmUiLCJhIjoiY21pempyNnB5MG1kYTNrc2s3OGdzbWdiMSJ9.lztu5lalK-f6TkMN0OsuCg"
+        }
+      ]
     ],
     "extra": {
       "MAPBOX_ACCESS_TOKEN": "pk.eyJ1Ijoia2lydXRoaWdhbmUiLCJhIjoiY21oYXJyeXdqMWozZjJsczV5dDlycnd5NyJ9.Bk5zF4AQxBeWBJjHux3UHQ",
       "eas": {
-        "projectId": "b56e2ae2-0117-43ef-9e4b-11cf4d4c96d2"
+        "projectId": "ae17c76e-4467-4ebe-91a6-a0f006ff0a7d"
       }
     }
   }

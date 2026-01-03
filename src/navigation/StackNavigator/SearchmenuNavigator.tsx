@@ -24,6 +24,7 @@ import CustomerFeedback from "@/components/Billing/View/CustomerFeedback";
 import CustomerFeedbackForm from "@/components/Billing/Form/CustomerFeedbackForm";
 import Invoices from "@/components/Billing/View/Invoices";
 import Payments from "@/components/Billing/View/Payments";
+import PaymentForm from "@/components/Billing/Form/PaymentForm";
 import Quotes from "@/components/Billing/View/Quotes";
 import ContactForm from "@/components/CRM/Form/ContactForm";
 import AccountsScreen from "@/components/CRM/View/Account";
@@ -105,7 +106,9 @@ export type SearchMenuStackParamList = {
   CustomerFeedback: undefined;
   CreateCustomerFeedback: { mode: "create" | "view" | "edit"; feedback?: any };
   
-  Payments: { mode: "create" | "view" | "edit"; data?: any };
+  Payments: undefined;
+  CreatePayment: { mode: "create" | "view" | "edit"; payment?: Payment };
+
   MapRouteScreen: {
     jobs: JobSchedule[];
     assignedUserId: string;
@@ -179,6 +182,7 @@ export default function SearchmenuNavigator() {
       <Stack.Screen name="CustomerFeedback" component={CustomerFeedback} />
       <Stack.Screen name="CreateCustomerFeedback" component={CustomerFeedbackForm} />
       <Stack.Screen name="Payments" component={Payments} />
+      <Stack.Screen name="CreatePayment" component={PaymentForm} />
       <Stack.Screen name="Quotes" component={Quotes} />
       <Stack.Screen name="QuotesForm" component={QuotesForm} />
     </Stack.Navigator>
