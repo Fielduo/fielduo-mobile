@@ -3,7 +3,7 @@ import SearchMenu from "@/components/report-analysis/search-menu";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import React from "react";
 
-import AccountForm from "@/components/fsm/form/AccountForm";
+import AccountForm from "@/components/CRM/Form/AccountForm";
 import AssetsForm from "@/components/fsm/form/AssetsForm";
 import CreateFieldWorkerTrip from "@/components/fsm/form/FieldWorkerTripForm";
 import TripLogForm from "@/components/fsm/form/TripLogForm";
