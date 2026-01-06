@@ -562,7 +562,7 @@ export default function CreateWorkOrderForm() {
               <Text style={styles.readOnlyText}>{description || "-"}</Text>
             </View>
           ) : (
-            <View style={styles.voiceInputWrapper}>
+            <View style={styles.voiceInputWrapper}> {/* Voice Input Wrapper*/}
               <TextInput
                 style={[styles.input, styles.shortDescriptionInput]}
                 placeholder="Describe briefly about the work order"
@@ -605,7 +605,7 @@ export default function CreateWorkOrderForm() {
               <Text style={styles.readOnlyText}>{notes || "-"}</Text>
             </View>
           ) : (
-            <View style={styles.voiceInputWrapper}>
+            <View style={styles.voiceInputWrapper}> {/* Voice Input Wrapper*/}
               <TextInput
                 style={[styles.input, styles.textArea]}
                 placeholder="Describe about the work order in detail"
@@ -1066,7 +1066,7 @@ export default function CreateWorkOrderForm() {
               <Text style={styles.readOnlyText}>{notes || "-"}</Text>
             </View>
           ) : (
-            <View style={styles.voiceInputWrapper}>
+            <View style={styles.voiceInputWrapper}> {/* Voice Input Wrapper*/}
               <TextInput
                 style={[styles.input, styles.textArea]}
                 placeholder="Enter detailed description"
