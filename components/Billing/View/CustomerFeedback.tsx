@@ -234,9 +234,7 @@ const CustomerFeedback: React.FC = () => {
             <Text style={styles.subTitle}>FSM</Text>
             <Text style={styles.title}>Customer Feedback</Text>
             <Text style={styles.subtitle}>
-              {loading
-                ? "Loading..."
-                : `${filteredFeedbacks.length} items - Updated just now`}
+              {loading ? "Loading..." : "Updated just now"}
             </Text>
           </View>
 

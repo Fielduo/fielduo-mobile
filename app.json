@@ -2,14 +2,14 @@
   "expo": {
     "name": "Fielduo",
     "slug": "fielduo-mobile",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon_v2.png",
     "scheme": "fielduomobile",
     "userInterfaceStyle": "automatic",
 
     "splash": {
-      "image": "./assets/images/Spalsh.png",
+      "image": "./assets/images/icon_v2.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },

@@ -1,8 +1,21 @@
 import { Picker } from '@react-native-picker/picker';
 import React, { useEffect, useState } from 'react';
-import { Modal, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  Modal,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { OPERATORS } from './filterOperators';
 import { FILTER_CONFIG, FilterField } from './filtersConfig';
+
+/* ================= PLACEHOLDERS (IMPORTANT) ================= */
+
+const FIELD_PLACEHOLDER = '__FIELD__';
+const OPERATOR_PLACEHOLDER = '__OPERATOR__';
+
+/* ================= TYPES ================= */
 
 export interface AppliedFilter {
   field: string;
@@ -24,11 +37,9 @@ type FilterModule =
   | 'work_completion'
   | 'invoices'
   | 'quotes'
-  | 'customer_feedback'   //  ADD THIS
+  | 'customer_feedback'
   | 'payments'
-  |'accounts';
-
-
+  | 'accounts';
 
 interface FilterModalProps {
   visible: boolean;
@@ -37,21 +48,25 @@ interface FilterModalProps {
   onApply: (filter: AppliedFilter) => void;
 }
 
+/* ================= CONSTANT ================= */
+
 const EMPTY_FILTER: AppliedFilter = {
-  field: '',
-  operator: '',
+  field: FIELD_PLACEHOLDER,
+  operator: OPERATOR_PLACEHOLDER,
   value: '',
 };
 
+/* ================= COMPONENT ================= */
+
 const FilterModal: React.FC<FilterModalProps> = ({
   visible,
-  module,        // ✅ IMPORTANT
+  module,
   onClose,
   onApply,
 }) => {
   const [filter, setFilter] = useState<AppliedFilter>(EMPTY_FILTER);
 
-  /** 🔥 Reset when modal opens */
+  /* Reset when modal opens */
   useEffect(() => {
     if (visible) {
       setFilter(EMPTY_FILTER);
@@ -60,9 +75,10 @@ const FilterModal: React.FC<FilterModalProps> = ({
 
   const fields: FilterField[] = FILTER_CONFIG[module];
 
-  const selectedField = fields.find(
-    (f: FilterField) => f.key === filter.field
-  );
+  const selectedField: FilterField | null =
+    filter.field !== FIELD_PLACEHOLDER
+      ? fields.find((f) => f.key === filter.field) || null
+      : null;
 
   const handleClose = () => {
     setFilter(EMPTY_FILTER);
@@ -70,54 +86,105 @@ const FilterModal: React.FC<FilterModalProps> = ({
   };
 
   const handleApply = () => {
-    if (!filter.field || !filter.operator || !filter.value) return;
+    if (
+      filter.field === FIELD_PLACEHOLDER ||
+      filter.operator === OPERATOR_PLACEHOLDER ||
+      !filter.value.trim()
+    ) {
+      return;
+    }
+
     onApply(filter);
     handleClose();
   };
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
-      <View style={{ flex: 1, backgroundColor: '#00000066', justifyContent: 'center' }}>
-        <View style={{ backgroundColor: '#fff', margin: 20, padding: 16, borderRadius: 10 }}>
-
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: '#00000066',
+          justifyContent: 'flex-end',
+        }}
+      >
+        <View
+          style={{
+            backgroundColor: '#fff',
+            margin: 20,
+            padding: 16,
+            borderRadius: 10,
+          }}
+        >
           <Text style={{ fontSize: 18, fontWeight: '700', marginBottom: 10 }}>
             Filter
           </Text>
 
-          {/* FIELD */}
-          <Picker
-            selectedValue={filter.field}
-            onValueChange={(v) =>
-              setFilter({ field: v, operator: '', value: '' })
-            }
-          >
-            <Picker.Item label="Select Field" value="" />
-            {fields.map((f: FilterField) => (
-              <Picker.Item key={f.key} label={f.label} value={f.key} />
-            ))}
-          </Picker>
-
-          {/* OPERATOR */}
-          {selectedField && (
+          {/* ================= FIELD ================= */}
+          <View style={{ height: 50, justifyContent: 'center' }}>
             <Picker
-              selectedValue={filter.operator}
+              mode="dropdown"
+              selectedValue={filter.field}
               onValueChange={(v) =>
-                setFilter((p) => ({ ...p, operator: v }))
+                setFilter({
+                  field: v,
+                  operator: OPERATOR_PLACEHOLDER,
+                  value: '',
+                })
               }
             >
-              <Picker.Item label="Select Operator" value="" />
-              {OPERATORS[selectedField.type].map((op) => (
+              <Picker.Item
+                label="Select Field"
+                value={FIELD_PLACEHOLDER}
+                color="#999"
+                enabled={false}
+              />
+
+              {fields.map((f) => (
                 <Picker.Item
-                  key={op.value}
-                  label={op.label}
-                  value={op.value}
+                  key={f.key}
+                  label={f.label}
+                  value={f.key}
                 />
               ))}
             </Picker>
+          </View>
+
+          {/* ================= OPERATOR ================= */}
+          {selectedField && (
+            <View
+              style={{
+                height: 50,
+                justifyContent: 'center',
+                marginTop: 10,
+              }}
+            >
+              <Picker
+                mode="dropdown"
+                selectedValue={filter.operator}
+                onValueChange={(v) =>
+                  setFilter((p) => ({ ...p, operator: v }))
+                }
+              >
+                <Picker.Item
+                  label="Select Operator"
+                  value={OPERATOR_PLACEHOLDER}
+                  color="#999"
+                  enabled={false}
+                />
+
+                {OPERATORS[selectedField.type].map((op) => (
+                  <Picker.Item
+                    key={op.value}
+                    label={op.label}
+                    value={op.value}
+                  />
+                ))}
+              </Picker>
+            </View>
           )}
 
-          {/* VALUE */}
-          {filter.operator !== '' && (
+          {/* ================= VALUE ================= */}
+          {filter.operator !== OPERATOR_PLACEHOLDER && (
             <TextInput
               placeholder="Enter value"
               value={filter.value}
@@ -128,12 +195,12 @@ const FilterModal: React.FC<FilterModalProps> = ({
                 borderWidth: 1,
                 borderRadius: 6,
                 padding: 10,
-                marginTop: 10,
+                marginTop: 12,
               }}
             />
           )}
 
-          {/* ACTIONS */}
+          {/* ================= ACTIONS ================= */}
           <View style={{ flexDirection: 'row', marginTop: 20 }}>
             <TouchableOpacity style={{ flex: 1 }} onPress={handleApply}>
               <Text style={{ color: 'green', textAlign: 'center' }}>
@@ -147,7 +214,6 @@ const FilterModal: React.FC<FilterModalProps> = ({
               </Text>
             </TouchableOpacity>
           </View>
-
         </View>
       </View>
     </Modal>
