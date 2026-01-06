@@ -104,14 +104,14 @@ export default function DashboardScreen() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [zoom, setZoom] = useState(14);
-const navigation = useNavigation<any>();
+  const navigation = useNavigation<any>();
 
   const [selectedTech, setSelectedTech] = useState<any>(null);
   const popupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 
 
-// Fetch technician locations from API
+  // Fetch technician locations from API
   const fetchTechnicians = async () => {
     try {
       const res = await api.get<TechnicianLocationResponse>("/technician-locations");
@@ -121,42 +121,42 @@ const navigation = useNavigation<any>();
     }
   };
 
-const actions: {
-  icon: ActionIconName;
-  text: string;
-  bg: string;
-  color: string;
-  screen: string;
-}[] = [
-  {
-    icon: "file-plus",
-    text: "Create New\n Triplog",
-    bg: "#0078DB1A",
-    color: "#1E88E5",
-    screen: "TripLogForm",
-  },
-  {
-    icon: "account-plus",
-    text: "Assign Field\nWorker",
-    bg: "#0095871A",
-    color: "#009587",
-    screen: "FieldWorkerTripForm",
-  },
-  {
-    icon: "calendar-clock",
-    text: "Schedule\nMaintenance",
-    bg: "#FDE6371A",
-    color: "#D9C425",
-    screen: "Schedule",
-  },
-  // {
-  //   icon: "file-chart",
-  //   text: "Generate\nReport",
-  //   bg: "#6234E21A",
-  //   color: "#6234E2",
-  //   screen: "ServiceReportForm",
-  // },
-];
+  const actions: {
+    icon: ActionIconName;
+    text: string;
+    bg: string;
+    color: string;
+    screen: string;
+  }[] = [
+      {
+        icon: "file-plus",
+        text: "Create New\n Triplog",
+        bg: "#0078DB1A",
+        color: "#1E88E5",
+        screen: "TripLogForm",
+      },
+      {
+        icon: "account-plus",
+        text: "Assign Field\nWorker",
+        bg: "#0095871A",
+        color: "#009587",
+        screen: "FieldWorkerTripForm",
+      },
+      {
+        icon: "calendar-clock",
+        text: "Schedule\nMaintenance",
+        bg: "#FDE6371A",
+        color: "#D9C425",
+        screen: "Schedule",
+      },
+      // {
+      //   icon: "file-chart",
+      //   text: "Generate\nReport",
+      //   bg: "#6234E21A",
+      //   color: "#6234E2",
+      //   screen: "ServiceReportForm",
+      // },
+    ];
 
   const activities = [
     { title: "New field survey completed", sub: "North District · 2 min ago", color: "#009587", bg: "#E8F5E9", status: "Completed" },
@@ -325,10 +325,10 @@ const actions: {
 
 
   return (
-   <View style={{ flex: 1 }}> 
+    <View style={{ flex: 1 }}>
       <ScrollView style={styles.container}>
         <Header />
-        
+
 
 
         <View style={styles.header}>
@@ -374,14 +374,14 @@ const actions: {
             icon={<MaterialIcons name="error-outline" size={18} color="#EF4444" />}
           />
 
-         <View style={[styles.statWrapper, styles.centerItem]}>
-    <StatCard
-      title="Active Technicians"
-      value={metrics?.active_technicians ?? 0}
-      color="#A855F7"
-      icon={<Ionicons name="people-outline" size={18} color="#A855F7" />}
-    />
-  </View>
+          <View style={[styles.statWrapper, styles.centerItem]}>
+            <StatCard
+              title="Active Technicians"
+              value={metrics?.active_technicians ?? 0}
+              color="#A855F7"
+              icon={<Ionicons name="people-outline" size={18} color="#A855F7" />}
+            />
+          </View>
 
         </View>
 
@@ -607,31 +607,31 @@ const actions: {
 
 
         <Text style={styles.sectionTitle}>Quick Actions</Text>
-<View style={styles.quickActions}>
-  {actions.map((a, i) => (
-    <TouchableOpacity
-      key={i}
-      style={styles.actionItem}
-    onPress={() =>
-  navigation.navigate('Home', {
-    screen: a.screen,
-  })
-}
+        <View style={styles.quickActions}>
+          {actions.map((a, i) => (
+            <TouchableOpacity
+              key={i}
+              style={styles.actionItem}
+              onPress={() =>
+                navigation.navigate('Home', {
+                  screen: a.screen,
+                })
+              }
 
-    >
-      <View
-        style={[
-          styles.actionIcon,
-          { backgroundColor: a.bg, borderColor: a.color, borderWidth: 2 },
-        ]}
-      >
-        <MaterialCommunityIcons name={a.icon} size={28} color={a.color} />
-      </View>
+            >
+              <View
+                style={[
+                  styles.actionIcon,
+                  { backgroundColor: a.bg, borderColor: a.color, borderWidth: 2 },
+                ]}
+              >
+                <MaterialCommunityIcons name={a.icon} size={28} color={a.color} />
+              </View>
 
-      <Text style={styles.actionText}>{a.text}</Text>
-    </TouchableOpacity>
-  ))}
-</View>
+              <Text style={styles.actionText}>{a.text}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
 
         {/* Recent Activities */}
@@ -688,9 +688,9 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   centerItem: {
-  width: "100%",
-  alignItems: "center",
-},
+    width: "100%",
+    alignItems: "center",
+  },
 
   userMarker: {
     width: 36,
@@ -712,10 +712,10 @@ const styles = StyleSheet.create({
   },
 
   container: {
-    flex: 1,
+
     backgroundColor: "#FFF",
     paddingHorizontal: 16,
-   
+
   },
 
   sectionTitle: {
@@ -796,7 +796,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
-     marginTop:10,
+    marginTop: 10,
   },
   title: {
     fontSize: 16,
@@ -814,15 +814,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     elevation: 2,
   },
-grid: {
-  flexDirection: "row",
-  flexWrap: "wrap",
-  justifyContent: "space-between",
-},
-statWrapper: {
-  width: "48%",
-  marginBottom: 16,
-},
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+  statWrapper: {
+    width: "48%",
+    marginBottom: 16,
+  },
 
   card: {
     width: '48%',

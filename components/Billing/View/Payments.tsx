@@ -2,6 +2,7 @@ import FilterModal, { AppliedFilter } from "@/components/common/FilterModal";
 import { paymentService } from "@/src/api/auth";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, { useEffect, useMemo, useState } from "react";
@@ -18,7 +19,7 @@ import HeaderSection from "../../common/HeaderSection";
 
 // --- Types ---
 export interface Payment {
-  payment_id: string;
+  id: string;
   invoice_number: string;
   amount: number;
   status: string;
@@ -30,13 +31,14 @@ export interface Payment {
   created_at?: string;
 }
 
-const getPaymentId = (p: any): string | null => {
-  return p?.id ?? null;
-};
-
 // --- Main Component ---
 const Payments: React.FC = () => {
-  const [payments, setPayments] = useState<Payment[]>([]);
+  type ViewMode = "all" | "recent";
+
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("all");
+  const [recentViewedIds, setRecentViewedIds] = useState<string[]>([]);
+  const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [filterVisible, setFilterVisible] = useState(false);
   const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(
@@ -45,16 +47,6 @@ const Payments: React.FC = () => {
 
   const navigation =
     useNavigation<NativeStackNavigationProp<SearchMenuStackParamList>>();
-
-  useEffect(() => {
-    fetchPayments();
-  }, []);
-
-  type ViewMode = "all" | "recent";
-
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("all");
-  const [recentViewedIds, setRecentViewedIds] = useState<string[]>([]);
 
   const fetchPayments = async () => {
     try {
@@ -69,6 +61,10 @@ const Payments: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    fetchPayments();
+  }, []);
+
   const handleCreateNewPayment = () => {
     navigation.navigate("CreatePayment", {
       mode: "create",
@@ -77,17 +73,49 @@ const Payments: React.FC = () => {
   };
 
   const handlePaymentCardPress = (payment: Payment) => {
-    // in-memory recently viewed (most recent first, max 10)
-    setRecentViewedIds((prev) =>
-      prev.includes(String(payment.payment_id))
-        ? prev
-        : [String(payment.payment_id), ...prev].slice(0, 10)
-    );
+    // Mark this payment as recently viewed (move to front, keep max 10)
+    setRecentViewedIds((prev) => {
+      const filtered = prev.filter((id) => id !== payment.id);
+      return [payment.id, ...filtered].slice(0, 10);
+    });
+
     navigation.navigate("CreatePayment", {
       mode: "view",
-      payment: payment,
+      payment,
     });
+    console.log("Pressed payment:", payment.id);
   };
+
+  // Load recently viewed ids from storage on mount
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const raw = await AsyncStorage.getItem("payments_recent_viewed");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) setRecentViewedIds(parsed);
+        }
+      } catch (err) {
+        console.error("Failed to load recent payments:", err);
+      }
+    };
+    load();
+  }, []);
+
+  // Persist recently viewed ids whenever they change
+  useEffect(() => {
+    const save = async () => {
+      try {
+        await AsyncStorage.setItem(
+          "payments_recent_viewed",
+          JSON.stringify(recentViewedIds)
+        );
+      } catch (err) {
+        console.error("Failed to save recent payments:", err);
+      }
+    };
+    save();
+  }, [recentViewedIds]);
 
   const renderPaymentCard = ({ item }: { item: Payment }) => {
     return (
@@ -117,8 +145,8 @@ const Payments: React.FC = () => {
                   item.status === "Paid"
                     ? styles.completed
                     : item.status === "Pending"
-                    ? styles.inProgress
-                    : styles.pending,
+                      ? styles.inProgress
+                      : styles.pending,
                 ]}
               >
                 <Text
@@ -127,8 +155,8 @@ const Payments: React.FC = () => {
                     item.status === "Paid"
                       ? styles.completedText
                       : item.status === "Pending"
-                      ? styles.inProgressText
-                      : styles.pendingText,
+                        ? styles.inProgressText
+                        : styles.pendingText,
                   ]}
                 >
                   {item.status}
@@ -195,45 +223,42 @@ const Payments: React.FC = () => {
     );
   };
 
-  const applyLocalFilter = (filter: AppliedFilter) => {
-    setAppliedFilter(filter);
-  };
-
   const filteredPayments = useMemo(() => {
-    let data = payments;
-
+    // RECENT VIEWn
     if (viewMode === "recent") {
-      data = data.filter((payment) =>
-        recentViewedIds.includes(String(payment.payment_id))
-      );
+      return recentViewedIds
+        .map((id) => payments.find((p) => p.id === id))
+        .filter((p): p is Payment => Boolean(p));
     }
 
-    if (!appliedFilter) return data;
+    // ALL VIEW
+    if (!appliedFilter) return payments;
 
     const { field, operator, value } = appliedFilter;
 
-    return data.filter((payment: any) => {
-      const fieldValue = payment[field];
+    return payments.filter((p: any) => {
+      const fieldValue = p[field];
       if (fieldValue == null) return false;
 
       switch (operator) {
         case "equals":
           return String(fieldValue).toLowerCase() === value.toLowerCase();
-
         case "contains":
           return String(fieldValue).toLowerCase().includes(value.toLowerCase());
-
         case "greater_than":
           return Number(fieldValue) > Number(value);
-
         case "less_than":
           return Number(fieldValue) < Number(value);
-
         default:
           return true;
       }
     });
   }, [payments, appliedFilter, viewMode, recentViewedIds]);
+
+
+  const applyLocalFilter = (filter: AppliedFilter) => {
+    setAppliedFilter(filter);
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: "#FFF" }}>
@@ -255,7 +280,10 @@ const Payments: React.FC = () => {
             <Text style={styles.subtitle}>
               {loading
                 ? "Loading..."
-                : `${filteredPayments.length} items - Updated just now`}
+                : `${viewMode === "recent"
+                  ? filteredPayments.length
+                  : payments.length
+                } items - Updated just now`}
             </Text>
           </View>
 
@@ -301,10 +329,9 @@ const Payments: React.FC = () => {
       {/* List */}
       <FlatList
         data={filteredPayments}
-        keyExtractor={(item) => item.payment_id}
+        keyExtractor={(item) => item.id}
         renderItem={renderPaymentCard}
         contentContainerStyle={{ padding: 12, paddingBottom: 80 }}
-        showsVerticalScrollIndicator={false}
       />
       <FilterModal
         visible={filterVisible}
@@ -347,11 +374,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#6B7280",
     marginBottom: 10,
-  },
-  debugText: {
-    fontSize: 12,
-    color: "#9CA3AF",
-    marginBottom: 6,
   },
   filterBtn: {
     flexDirection: "row",

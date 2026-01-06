@@ -207,9 +207,13 @@ const ContactForm = () => {
                     <View style={styles.dropdownWrapper}>
                         <Picker
                             enabled={!isView}
-                            selectedValue={form.account} // UUID
+                            selectedValue={form.account}
                             onValueChange={(value) => handleChange("account", value)}
+                            style={{ height: 50 }}          // 🔥 MUST
+                            itemStyle={{ height: 50 }}     // 🔥 ANDROID FIX
+                            mode="dropdown"                // 🔥
                         >
+
                             <Picker.Item label="Select Account" value="" />
                             {accounts.map((acc) => (
                                 <Picker.Item
@@ -574,10 +578,12 @@ const styles = StyleSheet.create({
     col: { width: "48%" },
     dropdownWrapper: {
         borderWidth: 1,
-        borderColor: "#ccc",
+        borderColor: "#D1D5DB",
         borderRadius: 6,
-        overflow: "hidden",
+        height: 50,          // 🔥 MUST
+        justifyContent: "center",
     },
+
     dateBox: {
         borderWidth: 1,
         borderColor: "#ccc",
