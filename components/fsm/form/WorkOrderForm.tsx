@@ -525,13 +525,40 @@ export default function CreateWorkOrderForm() {
               <Text style={styles.readOnlyText}>{description || "-"}</Text>
             </View>
           ) : (
-            <TextInput
-              style={styles.input}
-              placeholder="Enter short description"
-              value={description}
-              onChangeText={setDescription}
-              editable={!isViewMode}
-            />
+            <View style={styles.voiceInputWrapper}> {/* Voice Input Wrapper*/}
+              <TextInput
+                style={[styles.input, styles.shortDescriptionInput]}
+                placeholder="Describe briefly about the work order"
+                value={description}
+                onChangeText={setDescription}
+              />
+
+              <TouchableOpacity
+                style={[
+                  styles.micBtn,
+                  styles.micBtnTextArea,
+                  listening &&
+                    activeField === "description" &&
+                    styles.micBtnActive,
+                ]}
+                onPress={() => {
+                  setActiveField("description");
+                  listening ? stop() : start();
+                }}
+              >
+                <MaterialIcons
+                  name={
+                    listening && activeField === "description"
+                      ? "mic"
+                      : "mic-none"
+                  }
+                  size={22}
+                  color={
+                    listening && activeField === "description" ? "#fff" : "#000"
+                  }
+                />
+              </TouchableOpacity>
+            </View>
           )}
 
           <Text style={styles.label}>Long Description</Text>
@@ -540,14 +567,43 @@ export default function CreateWorkOrderForm() {
               <Text style={styles.readOnlyText}>{notes || "-"}</Text>
             </View>
           ) : (
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="Enter detailed description"
-              value={notes}
-              onChangeText={setNotes}
-              editable={!isViewMode}
-              multiline
-            />
+            <View style={styles.voiceInputWrapper}> {/* Voice Input Wrapper*/}
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Describe about the work order in detail"
+                value={longDescription}
+                onChangeText={setLongDescription}
+                multiline
+              />
+
+              <TouchableOpacity
+                style={[
+                  styles.micBtn,
+                  styles.micBtnTextArea,
+                  listening &&
+                    activeField === "longDescription" &&
+                    styles.micBtnActive,
+                ]}
+                onPress={() => {
+                  setActiveField("longDescription");
+                  listening ? stop() : start();
+                }}
+              >
+                <MaterialIcons
+                  name={
+                    listening && activeField === "longDescription"
+                      ? "mic"
+                      : "mic-none"
+                  }
+                  size={22}
+                  color={
+                    listening && activeField === "longDescription"
+                      ? "#fff"
+                      : "#000"
+                  }
+                />
+              </TouchableOpacity>
+            </View>
           )}
         </View>
 
@@ -961,14 +1017,35 @@ export default function CreateWorkOrderForm() {
               <Text style={styles.readOnlyText}>{notes || "-"}   </Text>
             </View>
           ) : (
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="Enter notes"
-              value={notes}
-              onChangeText={setNotes}
-              editable={!isViewMode}
-              multiline
-            />
+            <View style={styles.voiceInputWrapper}> {/* Voice Input Wrapper*/}
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Enter detailed description"
+                value={notes}
+                onChangeText={setNotes}
+                multiline
+              />
+
+              <TouchableOpacity
+                style={[
+                  styles.micBtn,
+                  styles.micBtnTextArea,
+                  listening && activeField === "notes" && styles.micBtnActive,
+                ]}
+                onPress={() => {
+                  setActiveField("notes");
+                  listening ? stop() : start();
+                }}
+              >
+                <MaterialIcons
+                  name={
+                    listening && activeField === "notes" ? "mic" : "mic-none"
+                  }
+                  size={22}
+                  color={listening && activeField === "notes" ? "#fff" : "#000"}
+                />
+              </TouchableOpacity>
+            </View>
           )}
           <View style={styles.section}>
             <Text style={styles.label}>Attachments [Json]</Text>
