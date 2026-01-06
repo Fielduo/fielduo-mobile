@@ -69,13 +69,13 @@ const handleLogin = async () => {
         {/* ===== Logo Section ===== */}
         <View style={styles.logoContainer}>
           <Image
-            source={require("../../assets/images/Logo.png")}
+            source={require("../../assets/images/headericon.png")}
             style={styles.logo}
             resizeMode="contain"
           />
         </View>
 
-        <Text style={styles.signInTitle}>SIGNIN</Text>
+        <Text style={styles.signInTitle}>SIGN IN</Text>
         <Text style={styles.signInSubtitle}>
           Sign in to continue to your account
         </Text>

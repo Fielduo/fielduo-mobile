@@ -11,7 +11,7 @@ const Header = () => {
     <View style={styles.header}>
       <View style={styles.leftSection}>
         <Image
-          source={require('../../assets/images/Logo.png')}
+             source={require('../../assets/images/headericon.png')}
           style={styles.logo}
         />
       </View>
@@ -33,8 +33,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    
+    paddingVertical: 16,
   },
   logo: {
     width: 86,

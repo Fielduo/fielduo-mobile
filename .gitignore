@@ -39,5 +39,8 @@ yarn-error.*
 app-example
 
 # generated native folders
-/ios
 
+
+# Gradle wrapper binaries
+
+android/gradle/wrapper/gradle-8.14.3-bin.zip

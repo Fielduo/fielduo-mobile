@@ -84,14 +84,14 @@ const handleSignup = async () => {
                 {/* ====== Logo Section ====== */}
                 <View style={styles.logoContainer}>
                     <Image
-                        source={require("../../assets/images/Logo.png")}
+                        source={require("../../assets/images/headericon.png")}
                         style={styles.logo}
                         resizeMode="contain"
                     />
                 </View>
 
                 {/* ====== Title Section ====== */}
-                <Text style={styles.signupTitle}>SIGNUP</Text>
+                <Text style={styles.signupTitle}>SIGN UP</Text>
                 <Text style={styles.subtitle}>Create Account</Text>
                 <Text style={styles.desc}>Join us and get started today</Text>
 
@@ -157,7 +157,7 @@ const handleSignup = async () => {
                         lang="en"
                         pickerButtonOnPress={(country: CountryItem) => {
                             setCallingCode(country.dial_code.replace("+", ""));
-                            setSelectedFlag(country.flag); // ✅ Set flag emoji
+                            setSelectedFlag(country.flag); //  Set flag emoji
                             setShowCountryPicker(false);
                         }}
                         onBackdropPress={() => setShowCountryPicker(false)}
