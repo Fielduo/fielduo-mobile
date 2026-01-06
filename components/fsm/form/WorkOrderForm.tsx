@@ -1,29 +1,32 @@
-import React, { useState, useEffect } from "react";
+import { api } from "@/src/api/cilent";
 import {
-  View,
+  searchAssets,
+  searchCustomers,
+  searchUsers,
+} from "@/src/api/workorder";
+import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
+import { useVoiceToText } from "@/store/useVoiceToText";
+import { WorkOrder } from "@/types/Worker";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { Picker } from "@react-native-picker/picker";
+import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import React, { useEffect, useState } from "react";
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
-  StyleSheet,
-  Alert,
+  View,
 } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import FormHeader from "../../common/FormHeader";
-import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
-import { Picker } from "@react-native-picker/picker";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-
 import { useAuthStore } from "../../../store/useAuthStore";
-import { api } from "@/src/api/cilent";
-import { searchAssets, searchCustomers, searchUsers } from "@/src/api/workorder";
-import { Ionicons } from "@expo/vector-icons";
-import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
-import { WorkOrder } from "@/types/Worker";
-
+import FormHeader from "../../common/FormHeader";
 
 interface DropdownOption {
-  id: string;   // UUID from backend
+  id: string; // UUID from backend
   name: string; // display name
 }
 
@@ -33,16 +36,22 @@ interface Vehicle {
 }
 
 // ✅ Route type
-type CreateWorkorderRouteProp = RouteProp<SearchMenuStackParamList, "CreateWorkorder">;
+type CreateWorkorderRouteProp = RouteProp<
+  SearchMenuStackParamList,
+  "CreateWorkorder"
+>;
 
 export default function CreateWorkOrderForm() {
-  const navigation = useNavigation<NativeStackNavigationProp<SearchMenuStackParamList>>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<SearchMenuStackParamList>>();
   const route = useRoute<CreateWorkorderRouteProp>();
 
-  const { mode = "create", workorder } = route.params || {} as {
-    mode?: string;
-    workorder?: WorkOrder;
-  };
+  const { mode = "create", workorder } =
+    route.params ||
+    ({} as {
+      mode?: string;
+      workorder?: WorkOrder;
+    });
 
   const isViewMode = mode === "view";
   const isEditMode = mode === "edit";
@@ -51,11 +60,15 @@ export default function CreateWorkOrderForm() {
   // --- Form states ---
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [longDescription, setLongDescription] = useState("");
   const [notes, setNotes] = useState("");
   const [schedule, setSchedule] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
 
-
+  const [activeField, setActiveField] = useState<
+    "description" | "longDescription" | "notes" | null
+  >(null);
+  const { text, start, stop, listening } = useVoiceToText();
 
   // --- Dropdowns ---
   const [status, setStatus] = useState<string>("");
@@ -68,12 +81,18 @@ export default function CreateWorkOrderForm() {
   const [types, setTypes] = useState<DropdownOption[]>([]);
 
   // --- Selected search IDs ---
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(
+    null
+  );
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
-  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
+  const [selectedContactId, setSelectedContactId] = useState<string | null>(
+    null
+  );
 
   // --- Optional fields ---
-  const [estimatedDuration, setEstimatedDuration] = useState<string | null>(null);
+  const [estimatedDuration, setEstimatedDuration] = useState<string | null>(
+    null
+  );
   const [supervisor, setSupervisor] = useState<string>(""); // selected supervisor name
   const [supervisorId, setSupervisorId] = useState<string | null>(null); // supervisor ID
 
@@ -84,13 +103,21 @@ export default function CreateWorkOrderForm() {
   const [laborHours, setLaborHours] = useState<string | null>(null);
 
   const [customerSearchQuery, setCustomerSearchQuery] = useState("");
-  const [customerSearchResults, setCustomerSearchResults] = useState<{ id: string; name: string }[]>([]);
+  const [customerSearchResults, setCustomerSearchResults] = useState<
+    { id: string; name: string }[]
+  >([]);
   const [assetSearchQuery, setAssetSearchQuery] = useState("");
-  const [assetSearchResults, setAssetSearchResults] = useState<{ id: string; name: string }[]>([]);
+  const [assetSearchResults, setAssetSearchResults] = useState<
+    { id: string; name: string }[]
+  >([]);
   const [contactSearchQuery, setContactSearchQuery] = useState("");
-  const [contactSearchResults, setContactSearchResults] = useState<{ id: string; name: string }[]>([]);
+  const [contactSearchResults, setContactSearchResults] = useState<
+    { id: string; name: string }[]
+  >([]);
   const [assignedToSearchQuery, setAssignedToSearchQuery] = useState("");
-  const [assignedToSearchResults, setAssignedToSearchResults] = useState<{ id: string; name: string }[]>([]);
+  const [assignedToSearchResults, setAssignedToSearchResults] = useState<
+    { id: string; name: string }[]
+  >([]);
 
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [showStartDate, setShowStartDate] = useState(false);
@@ -100,15 +127,13 @@ export default function CreateWorkOrderForm() {
   const [showCompletionDate, setShowCompletionDate] = useState(false);
   const [attachments, setAttachments] = useState<any[]>([]);
 
-
   const [requiredTechnicians, setRequiredTechnicians] = useState("");
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(
+    null
+  );
   const [vehicleSearchQuery, setVehicleSearchQuery] = useState("");
   const [vehicleSearchResults, setVehicleSearchResults] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
-
-
-
 
   // --- Auth token ---
   const token = useAuthStore.getState().token;
@@ -117,12 +142,16 @@ export default function CreateWorkOrderForm() {
   const fetchDropdowns = async () => {
     try {
       const typesRes = await api.get<DropdownOption[]>("/work_order_types");
-      setTypes(typesRes || []);  // ✅ removed .data
+      setTypes(typesRes || []); // ✅ removed .data
 
-      const statusesRes = await api.get<DropdownOption[]>("/work_order_statuses");
+      const statusesRes = await api.get<DropdownOption[]>(
+        "/work_order_statuses"
+      );
       setStatuses(statusesRes || []);
 
-      const prioritiesRes = await api.get<DropdownOption[]>("/work_order_priorities");
+      const prioritiesRes = await api.get<DropdownOption[]>(
+        "/work_order_priorities"
+      );
       setPriorities(prioritiesRes || []);
     } catch (err) {
       console.error("Failed to fetch dropdowns:", err);
@@ -140,7 +169,6 @@ export default function CreateWorkOrderForm() {
     }
   };
 
-
   useEffect(() => {
     if (vehicleSearchQuery.trim().length < 2) {
       setVehicleSearchResults([]);
@@ -148,16 +176,16 @@ export default function CreateWorkOrderForm() {
     }
 
     const q = vehicleSearchQuery.toLowerCase();
-    const results = vehicles.filter(v => (v.name ?? "").toLowerCase().includes(q));
+    const results = vehicles.filter((v) =>
+      (v.name ?? "").toLowerCase().includes(q)
+    );
     setVehicleSearchResults(results);
   }, [vehicleSearchQuery, vehicles]);
-
 
   useEffect(() => {
     fetchDropdowns();
     fetchVehicles();
   }, []);
-
 
   // --- Handle submit ---
   const handleSubmit = async () => {
@@ -170,7 +198,7 @@ export default function CreateWorkOrderForm() {
       const payload = {
         title,
         description,
-        long_description: notes,
+        long_description: longDescription,
         status_id: status || null,
         priority_id: priority || null,
         type_id: type || null,
@@ -180,7 +208,9 @@ export default function CreateWorkOrderForm() {
         customer_contact_id: selectedContactId || null,
         estimated_duration: estimatedDuration || null,
         actual_start_date: startDate ? startDate.toISOString() : null,
-        required_technicians: requiredTechnicians ? Number(requiredTechnicians) : null,
+        required_technicians: requiredTechnicians
+          ? Number(requiredTechnicians)
+          : null,
         vehicle_requirements: selectedVehicleId || null,
         completion_date: endDate ? endDate.toISOString() : null,
         assigned_to: assignedTo || null,
@@ -188,8 +218,7 @@ export default function CreateWorkOrderForm() {
         labor_hours: laborHours || null,
         notes,
         attachments: null,
-        scheduled_at: schedule || null
-
+        scheduled_at: schedule || null,
       };
 
       console.log("📦 Submitting payload:", payload);
@@ -197,10 +226,12 @@ export default function CreateWorkOrderForm() {
       navigation.goBack();
     } catch (error: any) {
       console.error("❌ Error creating work order:", error);
-      Alert.alert("Error", error.response?.data?.error || "Failed to save work order");
+      Alert.alert(
+        "Error",
+        error.response?.data?.error || "Failed to save work order"
+      );
     }
   };
-
 
   // Assigned To search
   useEffect(() => {
@@ -244,11 +275,8 @@ export default function CreateWorkOrderForm() {
     return () => clearTimeout(debounce);
   }, [assetSearchQuery]);
 
-
-
   useEffect(() => {
     if (workorder && mode !== "create") {
-
       // --- Basic fields ---
       setTitle(workorder.title || "");
       setDescription(workorder.description || "");
@@ -284,9 +312,7 @@ export default function CreateWorkOrderForm() {
       setLaborHours(workorder.labor_hours?.toString() || "");
 
       setStartDate(
-        workorder.scheduled_at
-          ? new Date(workorder.scheduled_at)
-          : null
+        workorder.scheduled_at ? new Date(workorder.scheduled_at) : null
       );
 
       // 2️⃣ Actual Start Date
@@ -298,16 +324,31 @@ export default function CreateWorkOrderForm() {
 
       // 3️⃣ Completion Date
       setCompletionDate(
-        workorder.completion_date
-          ? new Date(workorder.completion_date)
-          : null
+        workorder.completion_date ? new Date(workorder.completion_date) : null
       );
       setRequiredTechnicians(workorder.required_technicians?.toString() || "");
       setSelectedVehicleId(workorder.vehicle_requirements || null);
       setVehicleSearchQuery(workorder.vehicle_name || "");
-
     }
   }, [workorder]);
+
+  useEffect(() => {
+    if (!text || !activeField) return;
+
+    switch (activeField) {
+      case "description":
+        setDescription((prev) => (prev ? prev + " " + text : text));
+        break;
+
+      case "longDescription":
+        setLongDescription((prev) => (prev ? prev + " " + text : text));
+        break;
+
+      case "notes":
+        setNotes((prev) => (prev ? prev + " " + text : text));
+        break;
+    }
+  }, [text]);
 
   const handleDelete = async () => {
     if (!workorder?.id) return;
@@ -322,9 +363,10 @@ export default function CreateWorkOrderForm() {
           style: "destructive",
           onPress: async () => {
             try {
-              const response = await api.delete<{ message: string; deletedWorkOrder: any }>(
-                `/work_order/${workorder.id}`
-              );
+              const response = await api.delete<{
+                message: string;
+                deletedWorkOrder: any;
+              }>(`/work_order/${workorder.id}`);
 
               Alert.alert("Success", response.message);
               navigation.goBack(); // Go back after deletion
@@ -342,12 +384,12 @@ export default function CreateWorkOrderForm() {
     if (!dateStr) return "";
     const date = new Date(dateStr);
     return date.toLocaleString("en-US", {
-      month: "short",    // Oct
-      day: "2-digit",    // 18
-      year: "numeric",   // 2025
+      month: "short", // Oct
+      day: "2-digit", // 18
+      year: "numeric", // 2025
       hour: "2-digit",
       minute: "2-digit",
-      hour12: true       // 12-hour format with AM/PM
+      hour12: true, // 12-hour format with AM/PM
     });
   };
 
@@ -358,15 +400,15 @@ export default function CreateWorkOrderForm() {
           isCreateMode
             ? "Create Work Order"
             : isEditMode
-              ? "Edit Work Order"
-              : "View Work Order"
+            ? "Edit Work Order"
+            : "View Work Order"
         }
         subtitle={
           isCreateMode
             ? "Add a new Work Order to your inventory"
             : isEditMode
-              ? "Update existing Work Order details"
-              : "View Work Order information"
+            ? "Update existing Work Order details"
+            : "View Work Order information"
         }
         onBackPress={() => navigation.goBack()}
       />
@@ -428,12 +470,10 @@ export default function CreateWorkOrderForm() {
                 />
               )}
             </View>
-
           </View>
 
           {/* Row 2 */}
           <View style={styles.row}>
-
             {/* STATUS FIELD */}
             <View style={styles.column}>
               <Text style={styles.label}>Status</Text>
@@ -485,12 +525,9 @@ export default function CreateWorkOrderForm() {
                 </View>
               )}
             </View>
-
           </View>
 
-
           <View style={styles.row}>
-
             <View style={styles.column}>
               <Text style={styles.label}>Type</Text>
 
@@ -515,24 +552,22 @@ export default function CreateWorkOrderForm() {
                 </View>
               )}
             </View>
-
-
           </View>
 
           <Text style={styles.label}>Short Description</Text>
+
           {isViewMode ? (
             <View style={styles.readOnlyView}>
               <Text style={styles.readOnlyText}>{description || "-"}</Text>
             </View>
           ) : (
-            <View style={styles.voiceInputWrapper}> {/* Voice Input Wrapper*/}
+            <View style={styles.voiceInputWrapper}> {/* Voice Input Wrapper */}
               <TextInput
                 style={[styles.input, styles.shortDescriptionInput]}
                 placeholder="Describe briefly about the work order"
                 value={description}
                 onChangeText={setDescription}
               />
-
               <TouchableOpacity
                 style={[
                   styles.micBtn,
@@ -562,12 +597,13 @@ export default function CreateWorkOrderForm() {
           )}
 
           <Text style={styles.label}>Long Description</Text>
+
           {isViewMode ? (
             <View style={styles.readOnlyView}>
               <Text style={styles.readOnlyText}>{notes || "-"}</Text>
             </View>
           ) : (
-            <View style={styles.voiceInputWrapper}> {/* Voice Input Wrapper*/}
+            <View style={styles.voiceInputWrapper}> {/*Voice Input Wrapper*/}
               <TextInput
                 style={[styles.input, styles.textArea]}
                 placeholder="Describe about the work order in detail"
@@ -575,7 +611,6 @@ export default function CreateWorkOrderForm() {
                 onChangeText={setLongDescription}
                 multiline
               />
-
               <TouchableOpacity
                 style={[
                   styles.micBtn,
@@ -616,7 +651,9 @@ export default function CreateWorkOrderForm() {
               <Text style={styles.label}>Customer</Text>
               {isViewMode ? (
                 <View style={styles.readOnlyView}>
-                  <Text style={styles.readOnlyText}>{customerSearchQuery || "-"}</Text>
+                  <Text style={styles.readOnlyText}>
+                    {customerSearchQuery || "-"}
+                  </Text>
                 </View>
               ) : (
                 <TextInput
@@ -651,7 +688,9 @@ export default function CreateWorkOrderForm() {
               <Text style={styles.label}>Asset</Text>
               {isViewMode ? (
                 <View style={styles.readOnlyView}>
-                  <Text style={styles.readOnlyText}>{assetSearchQuery || "-"}</Text>
+                  <Text style={styles.readOnlyText}>
+                    {assetSearchQuery || "-"}
+                  </Text>
                 </View>
               ) : (
                 <TextInput
@@ -686,7 +725,9 @@ export default function CreateWorkOrderForm() {
           <Text style={styles.label}>Customer Contact</Text>
           {isViewMode ? (
             <View style={styles.readOnlyView}>
-              <Text style={styles.readOnlyText}>{contactSearchQuery || "-"}</Text>
+              <Text style={styles.readOnlyText}>
+                {contactSearchQuery || "-"}
+              </Text>
             </View>
           ) : (
             <TextInput
@@ -716,7 +757,6 @@ export default function CreateWorkOrderForm() {
           )}
         </View>
 
-
         {/* SCHEDULING & DURATION */}
         <Text style={styles.subHeader}>SCHEDULING & DURATION</Text>
         <View style={styles.section}>
@@ -725,7 +765,9 @@ export default function CreateWorkOrderForm() {
               <Text style={styles.label}>Scheduled Start Date</Text>
               {isViewMode ? (
                 <View style={styles.readOnlyView}>
-                  <Text style={styles.readOnlyText}>{startDate ? startDate.toDateString() : "-"}</Text>
+                  <Text style={styles.readOnlyText}>
+                    {startDate ? startDate.toDateString() : "-"}
+                  </Text>
                 </View>
               ) : (
                 <TouchableOpacity
@@ -757,7 +799,9 @@ export default function CreateWorkOrderForm() {
               <Text style={styles.label}>Actual Start Date</Text>
               {isViewMode ? (
                 <View style={styles.readOnlyView}>
-                  <Text style={styles.readOnlyText}>{endDate ? endDate.toDateString() : "-"}</Text>
+                  <Text style={styles.readOnlyText}>
+                    {endDate ? endDate.toDateString() : "-"}
+                  </Text>
                 </View>
               ) : (
                 <TouchableOpacity
@@ -791,7 +835,9 @@ export default function CreateWorkOrderForm() {
               <Text style={styles.label}>Completion Date</Text>
               {isViewMode ? (
                 <View style={styles.readOnlyView}>
-                  <Text style={styles.readOnlyText}>{completionDate ? completionDate.toDateString() : "-"}</Text>
+                  <Text style={styles.readOnlyText}>
+                    {completionDate ? completionDate.toDateString() : "-"}
+                  </Text>
                 </View>
               ) : (
                 <TouchableOpacity
@@ -844,7 +890,6 @@ export default function CreateWorkOrderForm() {
               )}
             </View>
 
-
             {/* 🔍 Asset Search */}
             <View style={styles.column}>
               <Text style={styles.label}>Vehicle Requirements</Text>
@@ -852,7 +897,8 @@ export default function CreateWorkOrderForm() {
               {isViewMode ? (
                 <View style={styles.readOnlyView}>
                   <Text style={styles.readOnlyText}>
-                    {vehicles.find(v => v.id === selectedVehicleId)?.name ?? "-"}
+                    {vehicles.find((v) => v.id === selectedVehicleId)?.name ??
+                      "-"}
                   </Text>
                 </View>
               ) : (
@@ -884,24 +930,23 @@ export default function CreateWorkOrderForm() {
                 </>
               )}
             </View>
-
-
           </View>
 
           <View style={styles.row}>
-
             {/* ✅ Estimated Duration */}
             <View style={styles.column}>
               <Text style={styles.label}>Estimated Duration (Hours)</Text>
               {isViewMode ? (
                 <View style={styles.readOnlyView}>
-                  <Text style={styles.readOnlyText}>{estimatedDuration || "-"}   </Text>
+                  <Text style={styles.readOnlyText}>
+                    {estimatedDuration || "-"}{" "}
+                  </Text>
                 </View>
               ) : (
                 <TextInput
                   style={styles.input}
                   placeholder="0.0"
-                  value={estimatedDuration || ""}     // <-- ADD THIS
+                  value={estimatedDuration || ""} // <-- ADD THIS
                   onChangeText={setEstimatedDuration} // <-- ADD THIS
                   keyboardType="numeric"
                   editable={!isViewMode}
@@ -914,7 +959,7 @@ export default function CreateWorkOrderForm() {
               <Text style={styles.label}>Labor Hours</Text>
               {isViewMode ? (
                 <View style={styles.readOnlyView}>
-                  <Text style={styles.readOnlyText}>{laborHours || "-"}   </Text>
+                  <Text style={styles.readOnlyText}>{laborHours || "-"} </Text>
                 </View>
               ) : (
                 <TextInput
@@ -927,9 +972,7 @@ export default function CreateWorkOrderForm() {
                 />
               )}
             </View>
-
           </View>
-
         </View>
 
         {/* ASSIGNMENT */}
@@ -938,10 +981,11 @@ export default function CreateWorkOrderForm() {
           <Text style={styles.label}>Assigned To</Text>
           {isViewMode ? (
             <View style={styles.readOnlyView}>
-              <Text style={styles.readOnlyText}>{assignedToSearchQuery || "-"}   </Text>
+              <Text style={styles.readOnlyText}>
+                {assignedToSearchQuery || "-"}{" "}
+              </Text>
             </View>
           ) : (
-
             <TextInput
               style={styles.input}
               placeholder="Search assigned user"
@@ -975,10 +1019,11 @@ export default function CreateWorkOrderForm() {
           <Text style={styles.label}>Supervisor</Text>
           {isViewMode ? (
             <View style={styles.readOnlyView}>
-              <Text style={styles.readOnlyText}>{supervisorSearchQuery || "-"}   </Text>
+              <Text style={styles.readOnlyText}>
+                {supervisorSearchQuery || "-"}{" "}
+              </Text>
             </View>
           ) : (
-
             <TextInput
               style={styles.input}
               placeholder="Search supervisor"
@@ -994,8 +1039,8 @@ export default function CreateWorkOrderForm() {
                 <TouchableOpacity
                   key={sup.id}
                   onPress={() => {
-                    setSupervisorId(sup.id);       // store ID for API
-                    setSupervisor(sup.name);       // store Name for UI
+                    setSupervisorId(sup.id); // store ID for API
+                    setSupervisor(sup.name); // store Name for UI
                     setSupervisorSearchQuery(sup.name);
                     setSupervisorSearchResults([]); // close dropdown
                   }}
@@ -1012,12 +1057,13 @@ export default function CreateWorkOrderForm() {
         <Text style={styles.subHeader}>ADDITIONAL INFORMATION</Text>
         <View style={styles.section}>
           <Text style={styles.label}>Notes</Text>
+
           {isViewMode ? (
             <View style={styles.readOnlyView}>
-              <Text style={styles.readOnlyText}>{notes || "-"}   </Text>
+              <Text style={styles.readOnlyText}>{notes || "-"}</Text>
             </View>
           ) : (
-            <View style={styles.voiceInputWrapper}> {/* Voice Input Wrapper*/}
+            <View style={styles.voiceInputWrapper}>  {/* Voice Input Wrapper */}
               <TextInput
                 style={[styles.input, styles.textArea]}
                 placeholder="Enter detailed description"
@@ -1025,7 +1071,6 @@ export default function CreateWorkOrderForm() {
                 onChangeText={setNotes}
                 multiline
               />
-
               <TouchableOpacity
                 style={[
                   styles.micBtn,
@@ -1047,11 +1092,14 @@ export default function CreateWorkOrderForm() {
               </TouchableOpacity>
             </View>
           )}
+
           <View style={styles.section}>
             <Text style={styles.label}>Attachments [Json]</Text>
             {isViewMode ? (
               <View style={styles.readOnlyView}>
-                <Text style={styles.readOnlyText}>{JSON.stringify(attachments, null, 2) || "-"}   </Text>
+                <Text style={styles.readOnlyText}>
+                  {JSON.stringify(attachments, null, 2) || "-"}{" "}
+                </Text>
               </View>
             ) : (
               <TextInput
@@ -1068,15 +1116,18 @@ export default function CreateWorkOrderForm() {
         <Text style={styles.subHeader}>System Information</Text>
         {isViewMode && workorder && (
           <View style={styles.systemInfo}>
-
             <View style={styles.infoRow}>
               <View style={styles.infoBox}>
                 <Text style={styles.infoLabel}>Created by:</Text>
-                <Text style={styles.infoValue}>{workorder.created_by_name || "-"}</Text>
+                <Text style={styles.infoValue}>
+                  {workorder.created_by_name || "-"}
+                </Text>
               </View>
               <View style={styles.infoBox}>
                 <Text style={styles.infoLabel}>Updated by:</Text>
-                <Text style={styles.infoValue}>{workorder.updated_by_name || "-"}</Text>
+                <Text style={styles.infoValue}>
+                  {workorder.updated_by_name || "-"}
+                </Text>
               </View>
             </View>
 
@@ -1084,31 +1135,38 @@ export default function CreateWorkOrderForm() {
               <View style={styles.infoBox}>
                 <Text style={styles.infoLabel}>Created at:</Text>
                 <Text style={styles.infoValue}>
-                  {workorder.created_at ? formatDate(workorder.created_at) : "-"}
+                  {workorder.created_at
+                    ? formatDate(workorder.created_at)
+                    : "-"}
                 </Text>
               </View>
 
               <View style={styles.infoBox}>
                 <Text style={styles.infoLabel}>Updated at:</Text>
                 <Text style={styles.infoValue}>
-                  {workorder.updated_at ? formatDate(workorder.updated_at) : "-"}
+                  {workorder.updated_at
+                    ? formatDate(workorder.updated_at)
+                    : "-"}
                 </Text>
               </View>
             </View>
-
           </View>
         )}
-
 
         <View style={styles.buttonContainer}>
           {(isCreateMode || isEditMode) && (
             <TouchableOpacity style={styles.saveButton} onPress={handleSubmit}>
-              <Text style={styles.buttonText}>{isCreateMode ? 'Save Asset' : 'Update Asset'}</Text>
+              <Text style={styles.buttonText}>
+                {isCreateMode ? "Save Asset" : "Update Asset"}
+              </Text>
             </TouchableOpacity>
           )}
 
           {isViewMode && (
-            <TouchableOpacity style={styles.cancelButton} onPress={handleDelete}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={handleDelete}
+            >
               <Text style={styles.cancelText}>Delete</Text>
             </TouchableOpacity>
           )}
@@ -1204,6 +1262,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     fontSize: 14,
   },
+  textarea: { height: 90 },
   textArea: { height: 80 },
   buttonContainer: { marginTop: 30, marginBottom: 50 },
   createButton: {
@@ -1229,17 +1288,14 @@ const styles = StyleSheet.create({
   buttonText: { color: "#fff", fontWeight: "600" },
   cancelText: { color: "#fff", fontWeight: "600" },
   readOnlyInput: {
-
     paddingHorizontal: 12,
     paddingVertical: 14,
     fontSize: 12,
     color: "#101318CC",
-
   },
   readOnlyView: {
     paddingVertical: 14,
     paddingHorizontal: 12,
-
   },
   readOnlyText: {
     fontSize: 12,
@@ -1248,7 +1304,6 @@ const styles = StyleSheet.create({
   systemInfo: {
     marginBottom: 10,
     padding: 12,
-
   },
   infoRow: {
     flexDirection: "row",
@@ -1268,5 +1323,34 @@ const styles = StyleSheet.create({
   infoValue: {
     fontSize: 14,
     color: "#111",
+  },
+  voiceInputWrapper: {
+    position: "relative",
+  },
+  shortDescriptionInput: {
+    height: 60, // 👈 increase height
+    paddingVertical: 14, // 👈 vertically center text
+    textAlignVertical: "center", // 👈 Android fix
+  },
+  micBtn: {
+    position: "absolute",
+    right: 10,
+    top: "50%", // 👈 center
+    transform: [{ translateY: -18 }], // 👈 half of button size
+    backgroundColor: "#eee",
+    padding: 6,
+    borderRadius: 20,
+    zIndex: 10,
+  },
+  // ONLY for multiline inputs (Long Description)
+  micBtnTextArea: {
+    top: 20,
+    transform: [{ translateY: 0 }],
+  },
+  micBtnActive: {
+    backgroundColor: "#ff4d4f",
+  },
+  micText: {
+    fontSize: 18,
   },
 });
