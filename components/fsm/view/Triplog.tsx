@@ -14,6 +14,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 import { Ionicons } from "@expo/vector-icons";
 import { fetchTrips, fetchTripStatusesFromAPI } from "@/database/local/triplog";
+import SwipeCard from "@/components/common/SwipeCard";
 
 type NavigationProp =
   NativeStackNavigationProp<SearchMenuStackParamList, "TripLog">;
@@ -176,66 +177,78 @@ export default function TripLog() {
         </View>
 
         {loading ? (
-          <ActivityIndicator size="large" color="#6B4EFF" />
-        ) : (
-          displayedTrips.map((trip) => (
-            <TouchableOpacity
-              key={trip.id}
-              style={styles.card}
-              onPress={() => {
-                setRecentTrips((prev) => {
-                  const updated = [
-                    trip,
-                    ...prev.filter((t) => t.id !== trip.id),
-                  ];
-                  return updated.slice(0, 20);
-                });
+  <ActivityIndicator size="large" color="#6B4EFF" />
+) : (
+  displayedTrips.map((trip) => (
+    <SwipeCard
+      key={trip.id}
+      onEdit={() =>
+        navigation.navigate("TripLogForm", {
+          mode: "edit",
+          data: trip,
+        })
+      }
+      onView={() => {
+        // 🔥 recently viewed update
+        setRecentTrips((prev) => {
+          const updated = [
+            trip,
+            ...prev.filter((t) => t.id !== trip.id),
+          ];
+          return updated.slice(0, 20);
+        });
 
-                navigation.navigate("TripLogForm", {
-                  mode: "view",
-                  data: trip,
-                });
-              }}
-            >
-              <View style={styles.rowBetween}>
-                <View>
-                  <Text style={styles.label}>Trip ID</Text>
-                  <Text style={styles.value}>{trip.trip_id || "-"}</Text>
-                </View>
-                <View>
-                  <Text style={styles.label}>Date</Text>
-                  <Text style={styles.value}>
-                    {new Date(trip.timestamp).toLocaleDateString()}
-                  </Text>
-                </View>
-              </View>
+        navigation.navigate("TripLogForm", {
+          mode: "view",
+          data: trip,
+        });
+      }}
+    >
+      <View style={styles.card}>
+        <View style={styles.rowBetween}>
+          <View>
+            <Text style={styles.label}>Trip ID</Text>
+            <Text style={styles.value}>
+              {trip.trip_id || "-"}
+            </Text>
+          </View>
 
-              <View style={styles.rowBetween}>
-                <View>
-                  <Text style={styles.smallLabel}>Work Order</Text>
-                  <Text style={styles.smallValue}>
-                    {trip.work_order_number || "-"}
-                  </Text>
-                </View>
+          <View>
+            <Text style={styles.label}>Date</Text>
+            <Text style={styles.value}>
+              {new Date(trip.timestamp).toLocaleDateString()}
+            </Text>
+          </View>
+        </View>
 
-                <View>
-                  <Text style={styles.smallLabel}>Site</Text>
-                  <Text style={styles.smallValue}>
-                    {trip.site_name ||
-                      `${trip.latitude}, ${trip.longitude}`}
-                  </Text>
-                </View>
+        <View style={styles.rowBetween}>
+          <View>
+            <Text style={styles.smallLabel}>Work Order</Text>
+            <Text style={styles.smallValue}>
+              {trip.work_order_number || "-"}
+            </Text>
+          </View>
 
-                <View>
-                  <Text style={styles.smallLabel}>Status</Text>
-                  <Text style={styles.smallValue}>
-                    {getStatusName(trip.job_status_id)}
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))
-        )}
+          <View>
+            <Text style={styles.smallLabel}>Site</Text>
+            <Text style={styles.smallValue}>
+              {trip.site_name ||
+                `${trip.latitude}, ${trip.longitude}`}
+            </Text>
+          </View>
+
+          <View>
+            <Text style={styles.smallLabel}>Status</Text>
+            <Text style={styles.smallValue}>
+              {getStatusName(trip.job_status_id)}
+            </Text>
+          </View>
+        </View>
+      </View>
+    </SwipeCard>
+  ))
+)}
+
 
       </ScrollView>
     </View>
@@ -247,7 +260,7 @@ export default function TripLog() {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 12,
+    padding: 16,
     paddingBottom: 90,
   },
   header: {
@@ -275,13 +288,20 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: "#fff",
     borderRadius: 5,
-    padding: 16,
+    padding: 20,
     marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 3,
+     // ✅ Full border
+  borderWidth: 1,
+  borderColor: "#E0E0E0",
+
+  // Shadow (iOS)
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.1,
+  shadowRadius: 3,
+
+  // Shadow (Android)
+  elevation: 2,
     marginTop: 10,
   },
   rowBetween: {

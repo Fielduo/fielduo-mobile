@@ -14,6 +14,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 import { quoteService } from "@/src/api/auth";
 import { Ionicons } from "@expo/vector-icons";
+import SwipeCard from "@/components/common/SwipeCard";
 
 type NavProp = NativeStackNavigationProp<SearchMenuStackParamList, "Quotes">;
 
@@ -80,7 +81,64 @@ const Quotes: React.FC = () => {
             );
         });
     }, [quotes, searchText, viewMode, recentQuoteIds]);
+const renderQuoteCard = (quote: any) => {
+  return (
+    <SwipeCard
+      onEdit={() =>
+        navigation.navigate("QuotesForm", { mode: "edit", quote })
+      }
+      onView={() => {
+        setRecentQuoteIds((prev) => {
+          const updated = [quote.id, ...prev.filter((id) => id !== quote.id)];
+          return updated.slice(0, 10); // keep last 10
+        });
+        navigation.navigate("QuotesForm", { mode: "view", quote });
+      }}
+    >
+      <View style={styles.card}>
+        <View style={styles.cardInner}>
+          {/* Column 1 */}
+          <View style={styles.col}>
+            <Text style={styles.colLabel}>Quote Number</Text>
+            <Text style={styles.colValue}>{quote.quote_number}</Text>
 
+            <Text style={[styles.colLabel, { marginTop: 14 }]}>Status</Text>
+            <View style={styles.statusPill}>
+              <Text style={styles.statusText}>{quote.status}</Text>
+            </View>
+
+            <Text style={[styles.colLabel, { marginTop: 14 }]}>Valid Until</Text>
+            <Text style={styles.colValue}>
+              {quote.valid_until ? formatDate(quote.valid_until) : "-"}
+            </Text>
+          </View>
+
+          {/* Column 2 */}
+          <View style={styles.vDivider} />
+          <View style={styles.col}>
+            <Text style={styles.colLabel}>Customer</Text>
+            <Text style={styles.colValue}>{quote.customer_name}</Text>
+
+            <Text style={[styles.colLabel, { marginTop: 14 }]}>Total Amount</Text>
+            <Text style={styles.amountText}>
+              {quote.currency} {Number(quote.total_amount || 0).toFixed(2)}
+            </Text>
+          </View>
+
+          {/* Column 3 */}
+          <View style={styles.vDivider} />
+          <View style={styles.col}>
+            <Text style={styles.colLabel}>Work Order</Text>
+            <Text style={styles.colValue}>{quote.work_order_number}</Text>
+
+            <Text style={[styles.colLabel, { marginTop: 14 }]}>Currency</Text>
+            <Text style={styles.colValue}>{quote.currency}</Text>
+          </View>
+        </View>
+      </View>
+    </SwipeCard>
+  );
+};
     return (
         <View style={{ flex: 1, backgroundColor: "#FFF" }}>
             <Header />
@@ -138,61 +196,17 @@ const Quotes: React.FC = () => {
                     </View>
                 </View>
 
-                {/* Quotes List */}
-                {loading ? (
-                    <ActivityIndicator size="large" color="#000" />
-                ) : (
-                    <ScrollView>
-                        {filteredQuotes.map((quote) => (
-                            <TouchableOpacity
-                                key={quote.id}
-                                onPress={() => handleQuotePress(quote)}
-                            >
-                                <View style={styles.card}>
-                                    <View style={styles.cardInner}>
-                                        {/* Column 1 */}
-                                        <View style={styles.col}>
-                                            <Text style={styles.colLabel}>Quote Number</Text>
-                                            <Text style={styles.colValue}>{quote.quote_number}</Text>
-
-                                            <Text style={[styles.colLabel, { marginTop: 14 }]}>Status</Text>
-                                            <View style={styles.statusPill}>
-                                                <Text style={styles.statusText}>{quote.status}</Text>
-                                            </View>
-
-                                            <Text style={[styles.colLabel, { marginTop: 14 }]}>Valid Until</Text>
-                                            <Text style={styles.colValue}>
-                                                {quote.valid_until ? formatDate(quote.valid_until) : "-"}
-                                            </Text>
-                                        </View>
-
-                                        {/* Column 2 */}
-                                        <View style={styles.vDivider} />
-                                        <View style={styles.col}>
-                                            <Text style={styles.colLabel}>Customer</Text>
-                                            <Text style={styles.colValue}>{quote.customer_name}</Text>
-
-                                            <Text style={[styles.colLabel, { marginTop: 14 }]}>Total Amount</Text>
-                                            <Text style={styles.amountText}>
-                                                {quote.currency} {Number(quote.total_amount || 0).toFixed(2)}
-                                            </Text>
-                                        </View>
-
-                                        {/* Column 3 */}
-                                        <View style={styles.vDivider} />
-                                        <View style={styles.col}>
-                                            <Text style={styles.colLabel}>Work Order</Text>
-                                            <Text style={styles.colValue}>{quote.work_order_number}</Text>
-
-                                            <Text style={[styles.colLabel, { marginTop: 14 }]}>Currency</Text>
-                                            <Text style={styles.colValue}>{quote.currency}</Text>
-                                        </View>
-                                    </View>
-                                </View>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-                )}
+           {loading ? (
+  <ActivityIndicator size="large" color="#000" />
+) : (
+  <ScrollView contentContainerStyle={{ padding: 8, paddingBottom: 80 }}>
+    {filteredQuotes.map((quote) => (
+      <View key={quote.id} style={{ marginBottom: 12 }}>
+        {renderQuoteCard(quote)}
+      </View>
+    ))}
+  </ScrollView>
+)}
             </View>
         </View>
     );
@@ -210,7 +224,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: "#fff",
-        paddingHorizontal: 16,
+        paddingHorizontal: 12,
 
     },
     headerRow: {

@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import Header from "../../common/Header";
 import HeaderSection from "../../common/HeaderSection";
+import SwipeCard from "@/components/common/SwipeCard";
 
 // --- Types ---
 export interface CustomerFeedback {
@@ -91,89 +92,102 @@ const [searchText, setSearchText] = useState("");
     );
   };
 
-  const renderFeedbackCard = ({ item }: { item: CustomerFeedback }) => {
-    return (
-      <TouchableOpacity onPress={() => handleFeedbackCardPress(item)}>
-        <View style={styles.card}>
-          {/* Row 1: Organization | Work Order | Rating */}
-          <View style={styles.row}>
-            <View style={styles.col}>
-              <Text style={styles.label}>Organization</Text>
-              <Text style={styles.value}>{item.organization_name}</Text>
-            </View>
+const renderFeedbackCard = ({ item }: { item: CustomerFeedback }) => {
+  return (
+    <SwipeCard
+      onEdit={() => {
+        navigation.navigate("CreateCustomerFeedback", {
+          mode: "edit",
+          feedback: item,
+        });
+      }}
+      onView={() => {
+        setRecentViewedIds((prev) =>
+          prev.includes(item.id) ? prev : [item.id, ...prev].slice(0, 10)
+        );
 
-            <View style={styles.verticalDivider} />
-
-            <View style={styles.col}>
-              <Text style={styles.label}>Work Order</Text>
-              <Text style={styles.value}>{item.work_order_number}</Text>
-            </View>
-
-            <View style={styles.verticalDivider} />
-
-            <View style={styles.col}>
-              <Text style={styles.label}>Rating</Text>
-              {renderStars(item.rating)}
-            </View>
+        navigation.navigate("CreateCustomerFeedback", {
+          mode: "view",
+          feedback: item,
+        });
+      }}
+    >
+      <View style={styles.card}>
+        {/* Row 1: Organization | Work Order | Rating */}
+        <View style={styles.row}>
+          <View style={styles.col}>
+            <Text style={styles.label}>Organization</Text>
+            <Text style={styles.value}>{item.organization_name}</Text>
           </View>
 
-          {/* Row 2: Comments | Submitted At | Created By */}
-          <View style={styles.row}>
-            <View style={styles.col}>
-              <Text style={styles.label}>Comments</Text>
-              <Text style={styles.value} numberOfLines={2} ellipsizeMode="tail">
-                {item.comments || "-"}
-              </Text>
-            </View>
+          <View style={styles.verticalDivider} />
 
-            <View style={styles.verticalDivider} />
-
-            <View style={styles.col}>
-              <Text style={styles.label}>Submitted At</Text>
-              <Text style={styles.value}>
-                {item.submitted_at
-                  ? new Date(item.submitted_at).toLocaleDateString("en-IN")
-                  : "-"}
-              </Text>
-            </View>
-
-            <View style={styles.verticalDivider} />
-
-            <View style={styles.col}>
-              <Text style={styles.label}>Created By</Text>
-              <Text style={styles.value}>{item.created_by_name}</Text>
-            </View>
+          <View style={styles.col}>
+            <Text style={styles.label}>Work Order</Text>
+            <Text style={styles.value}>{item.work_order_number}</Text>
           </View>
 
-          {/* Row 3: Updated At | Updated By */}
-          <View style={styles.row}>
-            {/* UPDATED AT */}
-            <View style={styles.col}>
-              <Text style={styles.label}>Updated At</Text>
-              <Text style={styles.value}>
-                {item.updated_at
-                  ? new Date(item.updated_at).toLocaleDateString("en-IN")
-                  : "-"}
-              </Text>
-            </View>
+          <View style={styles.verticalDivider} />
 
-            <View style={styles.verticalDivider} />
-
-            {/* UPDATED BY */}
-            <View style={styles.col}>
-              <Text style={styles.label}>Updated By</Text>
-              <Text style={styles.value}>{item.updated_by_name || "-"}</Text>
-            </View>
-
-            {/* EMPTY COL TO MATCH 3-COLUMN LAYOUT */}
-            <View style={styles.col}>
-              {/* keep it empty so spacing matches other rows */}
-            </View>
+          <View style={styles.col}>
+            <Text style={styles.label}>Rating</Text>
+            {renderStars(item.rating)}
           </View>
         </View>
-      </TouchableOpacity>
-    );
-  };
+
+        {/* Row 2: Comments | Submitted At | Created By */}
+        <View style={styles.row}>
+          <View style={styles.col}>
+            <Text style={styles.label}>Comments</Text>
+            <Text style={styles.value} numberOfLines={2} ellipsizeMode="tail">
+              {item.comments || "-"}
+            </Text>
+          </View>
+
+          <View style={styles.verticalDivider} />
+
+          <View style={styles.col}>
+            <Text style={styles.label}>Submitted At</Text>
+            <Text style={styles.value}>
+              {item.submitted_at
+                ? new Date(item.submitted_at).toLocaleDateString("en-IN")
+                : "-"}
+            </Text>
+          </View>
+
+          <View style={styles.verticalDivider} />
+
+          <View style={styles.col}>
+            <Text style={styles.label}>Created By</Text>
+            <Text style={styles.value}>{item.created_by_name}</Text>
+          </View>
+        </View>
+
+        {/* Row 3: Updated At | Updated By */}
+        <View style={styles.row}>
+          <View style={styles.col}>
+            <Text style={styles.label}>Updated At</Text>
+            <Text style={styles.value}>
+              {item.updated_at
+                ? new Date(item.updated_at).toLocaleDateString("en-IN")
+                : "-"}
+            </Text>
+          </View>
+
+          <View style={styles.verticalDivider} />
+
+          <View style={styles.col}>
+            <Text style={styles.label}>Updated By</Text>
+            <Text style={styles.value}>{item.updated_by_name || "-"}</Text>
+          </View>
+
+          {/* Empty column for layout consistency */}
+          <View style={styles.col} />
+        </View>
+      </View>
+    </SwipeCard>
+  );
+};
 
 
 

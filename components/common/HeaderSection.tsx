@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderColor: "#D1D5DB",
-    borderRadius: 6,
+    borderRadius: 5,
     padding: 10,
     paddingRight: 32, // space for clear button
   },

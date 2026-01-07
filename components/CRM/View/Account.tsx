@@ -1,5 +1,6 @@
 import Header from "@/components/common/Header";
 import HeaderSection from "@/components/common/HeaderSection";
+import SwipeCard from "@/components/common/SwipeCard";
 import { Account, accountsService } from "@/src/api/auth";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 import { Ionicons } from "@expo/vector-icons";
@@ -15,6 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Swipeable } from "react-native-gesture-handler";
 
 export default function AccountsScreen() {
   const navigation =
@@ -90,6 +92,8 @@ export default function AccountsScreen() {
     });
   };
 
+
+
   return (
     <View style={{ flex: 1, backgroundColor: "#FFF" }}>
       <Header />
@@ -156,10 +160,20 @@ export default function AccountsScreen() {
           <ActivityIndicator size="large" color="#6234E2" />
         ) : (
           filteredAccounts.map((acc) => (
-            <TouchableOpacity
+            <SwipeCard
               key={acc.id}
-              activeOpacity={0.85}
-              onPress={() => handleAccountPress(acc)}
+              onEdit={() =>
+                navigation.navigate("CreateAccount", {
+                  mode: "edit",
+                  account: acc,
+                })
+              }
+              onView={() =>
+                navigation.navigate("CreateAccount", {
+                  mode: "view",
+                  account: acc,
+                })
+              }
             >
               <View style={[styles.card, { borderLeftColor: "#6234E2" }]}>
                 <View style={styles.row}>
@@ -220,7 +234,9 @@ export default function AccountsScreen() {
                   </View>
                 </View>
               </View>
-            </TouchableOpacity>
+            </SwipeCard>
+
+
           ))
         )}
 
@@ -313,6 +329,27 @@ const styles = StyleSheet.create({
     zIndex: 999,
     elevation: 4,
   },
+  leftAction: {
+    backgroundColor: "#1C95F9",
+    justifyContent: "center",
+    alignItems: "center",
+    width: 90,
+  },
+
+  rightAction: {
+    backgroundColor: "#6C35D1",
+    justifyContent: "center",
+    alignItems: "center",
+    width: 90,
+  },
+
+  actionText: {
+    color: "#fff",
+    fontSize: 12,
+    marginTop: 4,
+    fontWeight: "600",
+  },
+
   dropdownItem: {
     padding: 12,
     borderBottomWidth: 1,

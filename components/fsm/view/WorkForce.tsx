@@ -17,6 +17,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 import { api } from "@/src/api/cilent";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import SwipeCard from "@/components/common/SwipeCard";
 
 
 
@@ -101,102 +102,105 @@ export default function WorkForce() {
         return () => clearInterval(interval);
     }, []);
 
-    const renderItem: ListRenderItem<FieldWorker> = ({ item }) => (
-        <View style={styles.card}>
-            <View style={styles.header}>
-                <View style={styles.avatarSection}>
-                    <Image
-                        source={{
-                            uri:
-                                item.image ||
-                                `https://i.pravatar.cc/100?u=${item.id}`, // placeholder if no image
-                        }}
-                        style={styles.avatar}
-                    />
-                    <Text style={styles.name}>{item.full_name}</Text>
-                </View>
-                <TouchableOpacity
-                    style={styles.viewButton}
-                    onPress={() => {
-                        // Add worker to recently viewed
-                        setRecentContacts(prev => {
-                            // Avoid duplicates
-                            const exists = prev.find(w => w.id === item.id);
-                            if (exists) return prev;
-                            // Add to the beginning (most recent first)
-                            return [item, ...prev];
-                        });
+   const renderItem: ListRenderItem<FieldWorker> = ({ item }) => (
+  <SwipeCard
+    onEdit={() =>
+      navigation.navigate("WorkForceForm", {
+        mode: "edit",
+        worker: item as unknown as any,
+      })
+    }
+    onView={() => {
+      // Add worker to recently viewed
+      setRecentContacts(prev => {
+        const exists = prev.find(w => w.id === item.id);
+        if (exists) return prev;
+        return [item, ...prev];
+      });
 
-                        // Navigate to view form
-                        navigation.navigate("WorkForceForm", {
-                            mode: "view",
-                            worker: item as unknown as any,
-                        });
-                    }}
-                >
-                    <MaterialCommunityIcons name="eye-outline" size={16} color="#fff" />
-                    <Text style={styles.viewText}>View</Text>
-                </TouchableOpacity>
-
-            </View>
-
-            {/* Info Grid */}
-            <View style={styles.infoGrid}>
-                <View style={styles.infoBox}>
-                    <View style={styles.labelRow}>
-                        <Ionicons name="mail-outline" size={16} color="#6C35D1" />
-
-                        <Text style={styles.label}>Email</Text>
-                    </View>
-                    <Text style={styles.value}>{item.email}</Text>
-                </View>
-                <View style={styles.infoBox}>
-                    <View style={styles.labelRow}>
-                        <Ionicons name="call-outline" size={16} color="#6C35D1" />
-
-                        <Text style={styles.label}>Phone</Text>
-                    </View>
-                    <Text style={styles.value}>{item.mobile}</Text>
-                </View>
-                <View style={[styles.infoBox, { borderRightWidth: 0 }]}>
-                    <View style={styles.labelRow}>
-                        <Ionicons name="person-outline" size={16} color="#6C35D1" />
-
-                        <Text style={styles.label}>Gender</Text>
-                    </View>
-                    <Text style={styles.value}>{item.gender}</Text>
-                </View>
-            </View>
-
-            <View style={styles.infoGrid}>
-                <View style={[styles.infoBox, { borderBottomWidth: 0 }]}>
-                    <View style={styles.labelRow}>
-                        <Ionicons name="location-outline" size={16} color="#6C35D1" />
-
-                        <Text style={styles.label}>City</Text>
-                    </View>
-                    <Text style={styles.value}>{item.city}</Text>
-                </View>
-                <View style={[styles.infoBox, { borderBottomWidth: 0 }]}>
-                    <View style={styles.labelRow}>
-                        <Ionicons name="settings-outline" size={16} color="#6C35D1" />
-
-                        <Text style={styles.label}>Skills</Text>
-                    </View>
-                    <Text style={styles.value}>{item.skills}</Text>
-                </View>
-                <View
-                    style={[styles.infoBox, { borderRightWidth: 0, borderBottomWidth: 0 }]}
-                >
-                    <View style={styles.labelRow}>
-                        <Ionicons name="calendar-outline" size={16} color="#6C35D1" />
-                        <Text style={styles.label}>Availability</Text>
-                    </View>
-                    <Text style={styles.value}>{item.availability}</Text>
-                </View>
-            </View>
+      navigation.navigate("WorkForceForm", {
+        mode: "view",
+        worker: item as unknown as any,
+      });
+    }}
+  >
+    <View style={styles.card}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.avatarSection}>
+          <Image
+            source={{
+              uri:
+                item.image ||
+                `https://i.pravatar.cc/100?u=${item.id}`,
+            }}
+            style={styles.avatar}
+          />
+          <Text style={styles.name}>{item.full_name}</Text>
         </View>
-    );
+      </View>
+
+      {/* Info Grid */}
+      <View style={styles.infoGrid}>
+        <View style={styles.infoBox}>
+          <View style={styles.labelRow}>
+            <Ionicons name="mail-outline" size={16} color="#6C35D1" />
+            <Text style={styles.label}>Email</Text>
+          </View>
+          <Text style={styles.value}>{item.email}</Text>
+        </View>
+
+        <View style={styles.infoBox}>
+          <View style={styles.labelRow}>
+            <Ionicons name="call-outline" size={16} color="#6C35D1" />
+            <Text style={styles.label}>Phone</Text>
+          </View>
+          <Text style={styles.value}>{item.mobile}</Text>
+        </View>
+
+        <View style={[styles.infoBox, { borderRightWidth: 0 }]}>
+          <View style={styles.labelRow}>
+            <Ionicons name="person-outline" size={16} color="#6C35D1" />
+            <Text style={styles.label}>Gender</Text>
+          </View>
+          <Text style={styles.value}>{item.gender}</Text>
+        </View>
+      </View>
+
+      <View style={styles.infoGrid}>
+        <View style={[styles.infoBox, { borderBottomWidth: 0 }]}>
+          <View style={styles.labelRow}>
+            <Ionicons name="location-outline" size={16} color="#6C35D1" />
+            <Text style={styles.label}>City</Text>
+          </View>
+          <Text style={styles.value}>{item.city}</Text>
+        </View>
+
+        <View style={[styles.infoBox, { borderBottomWidth: 0 }]}>
+          <View style={styles.labelRow}>
+            <Ionicons name="settings-outline" size={16} color="#6C35D1" />
+            <Text style={styles.label}>Skills</Text>
+          </View>
+          <Text style={styles.value}>{item.skills}</Text>
+        </View>
+
+        <View
+          style={[
+            styles.infoBox,
+            { borderRightWidth: 0, borderBottomWidth: 0 },
+          ]}
+        >
+          <View style={styles.labelRow}>
+            <Ionicons name="calendar-outline" size={16} color="#6C35D1" />
+            <Text style={styles.label}>Availability</Text>
+          </View>
+          <Text style={styles.value}>{item.availability}</Text>
+        </View>
+      </View>
+    </View>
+  </SwipeCard>
+);
+
 
     if (loading) return <ActivityIndicator size="large" color="#6234E2" style={{ flex: 1 }} />;
     const displayContacts =

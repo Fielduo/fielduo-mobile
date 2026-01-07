@@ -15,6 +15,7 @@ import { Inventory } from "@/types/Worker";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 import { api } from "@/src/api/cilent";
 import { Ionicons } from "@expo/vector-icons";
+import SwipeCard from "@/components/common/SwipeCard";
 
 type ViewMode = "all" | "recent";
 
@@ -105,68 +106,95 @@ export default function InventoryScreen() {
 
   /* ---------------- CARD UI ---------------- */
   const renderInventoryCard = ({ item }: { item: Inventory }) => (
-    <TouchableOpacity onPress={() => handleCardPress(item)}>
-      <View style={styles.card}>
-        <View style={styles.row}>
-          <View style={styles.col}>
-            <Text style={styles.label}>Item Number</Text>
-            <Text style={styles.value}>
-              {item.item_number ?? item.item_id}
-            </Text>
-          </View>
-          <View style={styles.col}>
-            <Text style={styles.label}>Item Name</Text>
-            <Text style={styles.value}>{item.item_name}</Text>
-          </View>
-          <View style={styles.col}>
-            <Text style={styles.label}>Description</Text>
-            <Text style={styles.value}>
-              {item.item_description || "-"}
+  <SwipeCard
+    onEdit={() =>
+      navigation.navigate("CreateInventory", {
+        mode: "edit",
+        inventory: item,
+      })
+    }
+    onView={() => {
+      // 🔥 add to recent viewed
+      setRecentInventory((prev) => {
+        const exists = prev.find(
+          (i) => i.item_id === item.item_id
+        );
+        if (exists) return prev;
+        return [item, ...prev].slice(0, 5);
+      });
+
+      navigation.navigate("CreateInventory", {
+        mode: "view",
+        inventory: item,
+      });
+    }}
+  >
+    <View style={styles.card}>
+      {/* ROW 1 */}
+      <View style={styles.row}>
+        <View style={styles.col}>
+          <Text style={styles.label}>Item Number</Text>
+          <Text style={styles.value}>
+            {item.item_number ?? item.item_id}
+          </Text>
+        </View>
+
+        <View style={styles.col}>
+          <Text style={styles.label}>Item Name</Text>
+          <Text style={styles.value}>{item.item_name}</Text>
+        </View>
+
+        <View style={styles.col}>
+          <Text style={styles.label}>Description</Text>
+          <Text style={styles.value}>
+            {item.item_description || "-"}
+          </Text>
+        </View>
+      </View>
+
+      {/* ROW 2 */}
+      <View style={styles.row}>
+        <View style={styles.col}>
+          <Text style={styles.label}>Category</Text>
+          <Text style={styles.value}>{item.category || "-"}</Text>
+        </View>
+
+        <View style={styles.col}>
+          <Text style={styles.label}>Stock</Text>
+          <View
+            style={[
+              styles.badge,
+              isLowStock(item.stock_quantity)
+                ? styles.lowStock
+                : styles.inStock,
+            ]}
+          >
+            <Text style={styles.badgeText}>
+              {getStockLabel(item.stock_quantity)}
             </Text>
           </View>
         </View>
 
-        <View style={styles.row}>
-          <View style={styles.col}>
-            <Text style={styles.label}>Category</Text>
-            <Text style={styles.value}>{item.category || "-"}</Text>
-          </View>
-
-          <View style={styles.col}>
-            <Text style={styles.label}>Stock</Text>
-            <View
-              style={[
-                styles.badge,
-                isLowStock(item.stock_quantity)
-                  ? styles.lowStock
-                  : styles.inStock,
-              ]}
-            >
-              <Text style={styles.badgeText}>
-                {getStockLabel(item.stock_quantity)}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.col}>
-            <Text style={styles.label}>Status</Text>
-            <View
-              style={[
-                styles.badge,
-                item.status?.toLowerCase() === "discontinued"
-                  ? styles.discontinued
-                  : styles.active,
-              ]}
-            >
-              <Text style={styles.badgeText}>
-                {item.status || "N/A"}
-              </Text>
-            </View>
+        <View style={styles.col}>
+          <Text style={styles.label}>Status</Text>
+          <View
+            style={[
+              styles.badge,
+              item.status?.toLowerCase() === "discontinued"
+                ? styles.discontinued
+                : styles.active,
+            ]}
+          >
+            <Text style={styles.badgeText}>
+              {item.status || "N/A"}
+            </Text>
           </View>
         </View>
       </View>
-    </TouchableOpacity>
-  );
+    </View>
+  </SwipeCard>
+);
+
 
   /* ---------------- UI ---------------- */
   return (
