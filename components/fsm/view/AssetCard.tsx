@@ -14,7 +14,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 import { api } from "@/src/api/cilent";
 import { Asset } from "@/types/Worker";
-import FilterModal, { AppliedFilter } from "@/components/common/FilterModal";
+
 import { Ionicons } from "@expo/vector-icons";
 
 
@@ -24,8 +24,8 @@ export default function AssetCard() {
     useNavigation<NativeStackNavigationProp<SearchMenuStackParamList>>();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(false);
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(null);
+  const [searchText, setSearchText] = useState("");
+
   const [filteredAssets, setFilteredAssets] = useState<Asset[]>([]);
   type ViewMode = 'all' | 'recent';
 
@@ -57,32 +57,23 @@ export default function AssetCard() {
   }, []);
 
   useEffect(() => {
-    if (!appliedFilter) {
+    if (!searchText.trim()) {
       setFilteredAssets(assets);
       return;
     }
 
-    const { field, operator, value } = appliedFilter;
+    const text = searchText.toLowerCase();
 
-    const result = assets.filter((item: any) => {
-      const itemValue = item[field];
-      if (!itemValue) return false;
-
-      if (operator === 'contains') {
-        return itemValue.toString().toLowerCase().includes(value.toLowerCase());
-      }
-      if (operator === '=') {
-        return itemValue.toString().toLowerCase() === value.toLowerCase();
-      }
-      if (operator === '>') return itemValue > value;
-      if (operator === '<') return itemValue < value;
-
-      return true;
-    });
+    const result = assets.filter((item) =>
+      Object.values(item).some((value) =>
+        value
+          ? value.toString().toLowerCase().includes(text)
+          : false
+      )
+    );
 
     setFilteredAssets(result);
-  }, [appliedFilter, assets]);
-
+  }, [searchText, assets]);
 
 
   // 🔹 View or Edit asset
@@ -151,60 +142,57 @@ export default function AssetCard() {
         title="What services do you need?"
         buttonText="+ New Assets"
         onButtonClick={handleCreateNew}
-        onSearchPress={() => setFilterOpen(true)} //  SEARCH CLICK
+        searchValue={searchText}
+        onSearchChange={setSearchText}
       />
-<View style={styles.headerRow}>
-  {/*  LEFT SIDE */}
-  <View style={styles.sectionHeader}>
-    <Text style={styles.subTitle}>FSM</Text>
-    <Text style={styles.title}>Assets</Text>
-    <Text style={styles.subtitle}>Updated just now</Text>
-  </View>
 
-  {/*  RIGHT SIDE */}
-  <View style={{ position: 'relative' }}>
-    <TouchableOpacity
-      style={styles.filterBtn}
-      onPress={() => setDropdownOpen((prev) => !prev)}
-    >
-      <Text style={styles.filterText}>
-        {viewMode === 'all' ? 'All' : 'Recently Viewed'}
-      </Text>
-      <Ionicons name="chevron-down-outline" size={16} color="#444" />
-    </TouchableOpacity>
+      <View style={styles.headerRow}>
+        {/*  LEFT SIDE */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.subTitle}>FSM</Text>
+          <Text style={styles.title}>Assets</Text>
+          <Text style={styles.subtitle}>Updated just now</Text>
+        </View>
 
-    {dropdownOpen && (
-      <View style={styles.dropdown}>
-        <TouchableOpacity
-          style={styles.dropdownItem}
-          onPress={() => {
-            setViewMode('all');
-            setDropdownOpen(false);
-          }}
-        >
-          <Text>All</Text>
-        </TouchableOpacity>
+        {/*  RIGHT SIDE */}
+        <View style={{ position: 'relative' }}>
+          <TouchableOpacity
+            style={styles.filterBtn}
+            onPress={() => setDropdownOpen((prev) => !prev)}
+          >
+            <Text style={styles.filterText}>
+              {viewMode === 'all' ? 'All' : 'Recently Viewed'}
+            </Text>
+            <Ionicons name="chevron-down-outline" size={16} color="#444" />
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.dropdownItem}
-          onPress={() => {
-            setViewMode('recent');
-            setDropdownOpen(false);
-          }}
-        >
-          <Text>Recently Viewed</Text>
-        </TouchableOpacity>
+          {dropdownOpen && (
+            <View style={styles.dropdown}>
+              <TouchableOpacity
+                style={styles.dropdownItem}
+                onPress={() => {
+                  setViewMode('all');
+                  setDropdownOpen(false);
+                }}
+              >
+                <Text>All</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.dropdownItem}
+                onPress={() => {
+                  setViewMode('recent');
+                  setDropdownOpen(false);
+                }}
+              >
+                <Text>Recently Viewed</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       </View>
-    )}
-  </View>
-</View>
 
-      <FilterModal
-        visible={filterOpen}
-        module="assets"
-        onClose={() => setFilterOpen(false)}
-        onApply={(filter) => setAppliedFilter(filter)}
-      />
+
 
       {loading ? (
         <ActivityIndicator size="large" color="#6234E2" style={{ marginTop: 30 }} />
@@ -229,7 +217,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF",
   },
   subTitle: {
-     flex: 1,
+    flex: 1,
     color: "#6234E2",
     fontSize: 12,
     fontWeight: "600",
@@ -245,33 +233,33 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     marginBottom: 10,
   },
-headerRow: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  paddingHorizontal: 16,
-  paddingTop: 10,
-  backgroundColor: '#FFF',
-},
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    backgroundColor: '#FFF',
+  },
 
 
 
-filterBtn: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'space-between',
+  filterBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
 
-  height: 36,
-  minWidth: 170,
-  paddingHorizontal: 12,
+    height: 36,
+    minWidth: 170,
+    paddingHorizontal: 12,
 
-  borderWidth: 1,
-  borderColor: '#D1D5DB',
-  borderRadius: 6,
-  backgroundColor: '#fff',
-},
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 6,
+    backgroundColor: '#fff',
+  },
 
- 
+
   filterText: {
     fontSize: 14,
     marginRight: 6,

@@ -1,56 +1,55 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import React from "react";
+import { View, Text, TouchableOpacity, StyleSheet, TextInput } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 
 interface HeaderSectionProps {
   title: string;
   buttonText: string;
   onButtonClick?: () => void;
-  onSearchPress?: () => void;   // ✅ ONLY this
-  currentScreen?: string;
+  searchValue: string;
+  onSearchChange: (text: string) => void;
 }
 
 const HeaderSection: React.FC<HeaderSectionProps> = ({
   title,
   buttonText,
   onButtonClick,
-  onSearchPress,     // ✅ FIXED (was onSearchChange ❌)
-  currentScreen,
+  searchValue,
+  onSearchChange,
 }) => {
-  const hideHeader =
-    currentScreen === 'DashboardScreen' ||
-    currentScreen === 'SearchMenu';
-
   return (
     <View style={styles.container}>
-      {/* 🔹 Header Row */}
-      {!hideHeader && (
-        <View style={styles.headerRow}>
-          <Text style={styles.title}>{title}</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.title}>{title}</Text>
 
-          <TouchableOpacity onPress={onButtonClick} activeOpacity={0.8}>
-            <LinearGradient
-              colors={['#6234E2', '#DF34E2']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.gradientButton}
-            >
-              <Text style={styles.buttonText}>{buttonText}</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-      )}
+        <TouchableOpacity onPress={onButtonClick}>
+          <LinearGradient
+            colors={["#6234E2", "#DF34E2"]}
+            style={styles.gradientButton}
+          >
+            <Text style={styles.buttonText}>{buttonText}</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
 
-      {/* 🔍 Search Input (CLICK ONLY) */}
-      <TouchableOpacity activeOpacity={1} onPress={onSearchPress}>
+      {/* ✅ DIRECT SEARCH WITH CLEAR BUTTON */}
+      <View style={styles.searchContainer}>
         <TextInput
           placeholder="Search..."
-          placeholderTextColor="#9CA3AF"
+          value={searchValue}
+          onChangeText={onSearchChange}
           style={styles.input}
-          editable={false}       // ✅ no typing
-          pointerEvents="none"   // ✅ click passes to TouchableOpacity
         />
-      </TouchableOpacity>
+        {searchValue.length > 0 && (
+          <TouchableOpacity
+            style={styles.clearBtn}
+            onPress={() => onSearchChange("")}
+          >
+            <Ionicons name="close-circle" size={20} color="#888" />
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 };
@@ -58,38 +57,33 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
 export default HeaderSection;
 
 const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
+  container: { padding: 16 },
   headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 12,
   },
-  title: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6234E2',
-  },
+  title: { fontSize: 14, fontWeight: "600", color: "#6234E2" },
   gradientButton: {
     borderRadius: 4,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  buttonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 14,
+  buttonText: { color: "#fff", fontWeight: "600" },
+  searchContainer: {
+    position: "relative",
   },
   input: {
     borderWidth: 1,
-    borderColor: '#535351B2',
-    borderRadius: 4,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    fontSize: 14,
-    color: '#53535180',
+    borderColor: "#D1D5DB",
+    borderRadius: 6,
+    padding: 10,
+    paddingRight: 32, // space for clear button
+  },
+  clearBtn: {
+    position: "absolute",
+    right: 8,
+    top: "50%",
+    transform: [{ translateY: -10 }],
   },
 });

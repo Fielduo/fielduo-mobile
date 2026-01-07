@@ -1,4 +1,3 @@
-import FilterModal, { AppliedFilter } from "@/components/common/FilterModal";
 import { paymentService } from "@/src/api/auth";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 import { Ionicons } from "@expo/vector-icons";
@@ -38,20 +37,18 @@ const Payments: React.FC = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("all");
   const [recentViewedIds, setRecentViewedIds] = useState<string[]>([]);
-  const [payments, setPayments] = useState<any[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(false);
-  const [filterVisible, setFilterVisible] = useState(false);
-  const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(
-    null
-  );
+  const [searchText, setSearchText] = useState("");
 
   const navigation =
     useNavigation<NativeStackNavigationProp<SearchMenuStackParamList>>();
 
+  // --- Fetch payments ---
   const fetchPayments = async () => {
     try {
       setLoading(true);
-      const data = await paymentService.getAll(); // adjust API call
+      const data = await paymentService.getAll();
       setPayments(data);
     } catch (err) {
       console.error("Payments fetch error:", err);
@@ -65,28 +62,7 @@ const Payments: React.FC = () => {
     fetchPayments();
   }, []);
 
-  const handleCreateNewPayment = () => {
-    navigation.navigate("CreatePayment", {
-      mode: "create",
-    });
-    console.log("Create new payment");
-  };
-
-  const handlePaymentCardPress = (payment: Payment) => {
-    // Mark this payment as recently viewed (move to front, keep max 10)
-    setRecentViewedIds((prev) => {
-      const filtered = prev.filter((id) => id !== payment.id);
-      return [payment.id, ...filtered].slice(0, 10);
-    });
-
-    navigation.navigate("CreatePayment", {
-      mode: "view",
-      payment,
-    });
-    console.log("Pressed payment:", payment.id);
-  };
-
-  // Load recently viewed ids from storage on mount
+  // --- Handle recently viewed storage ---
   useEffect(() => {
     const load = async () => {
       try {
@@ -102,7 +78,6 @@ const Payments: React.FC = () => {
     load();
   }, []);
 
-  // Persist recently viewed ids whenever they change
   useEffect(() => {
     const save = async () => {
       try {
@@ -117,161 +92,119 @@ const Payments: React.FC = () => {
     save();
   }, [recentViewedIds]);
 
-  const renderPaymentCard = ({ item }: { item: Payment }) => {
-    return (
-      <TouchableOpacity onPress={() => handlePaymentCardPress(item)}>
-        <View style={styles.card}>
-          {/* Row 1: Invoice | Amount | Status */}
-          <View style={styles.row}>
-            <View style={styles.col}>
-              <Text style={styles.label}>Invoice</Text>
-              <Text style={styles.value}>{item.invoice_number}</Text>
-            </View>
+  // --- Create & view handlers ---
+  const handleCreateNewPayment = () => {
+    navigation.navigate("CreatePayment", { mode: "create" });
+  };
 
-            <View style={styles.verticalDivider} />
+  const handlePaymentCardPress = (payment: Payment) => {
+    setRecentViewedIds((prev) => {
+      const filtered = prev.filter((id) => id !== payment.id);
+      return [payment.id, ...filtered].slice(0, 10);
+    });
 
-            <View style={styles.col}>
-              <Text style={styles.label}>Amount</Text>
-              <Text style={styles.value}>{item.amount}</Text>
-            </View>
+    navigation.navigate("CreatePayment", { mode: "view", payment });
+  };
 
-            <View style={styles.verticalDivider} />
+  // --- Format date ---
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return "-";
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return "-";
+    return date.toLocaleDateString("en-IN");
+  };
 
-            <View style={styles.col}>
-              <Text style={styles.label}>Status</Text>
-              <View
-                style={[
-                  styles.badge,
-                  item.status === "Paid"
-                    ? styles.completed
-                    : item.status === "Pending"
-                      ? styles.inProgress
-                      : styles.pending,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.badgeText,
-                    item.status === "Paid"
-                      ? styles.completedText
-                      : item.status === "Pending"
-                        ? styles.inProgressText
-                        : styles.pendingText,
-                  ]}
-                >
-                  {item.status}
-                </Text>
-              </View>
-            </View>
+  // --- Filter payments by direct search & recent view ---
+  const filteredPayments = useMemo(() => {
+    return payments.filter((p) => {
+      const text = searchText.toLowerCase();
+
+      if (viewMode === "recent" && !recentViewedIds.includes(p.id))
+        return false;
+
+      return (
+        p.invoice_number?.toLowerCase().includes(text) ||
+        p.customer_name?.toLowerCase().includes(text) ||
+        p.status?.toLowerCase().includes(text) ||
+        p.method?.toLowerCase().includes(text) ||
+        p.notes?.toLowerCase().includes(text) ||
+        p.reference?.toLowerCase().includes(text) ||
+        String(p.amount).includes(text) ||
+        formatDate(p.payment_date).includes(text) ||
+        formatDate(p.created_at).includes(text)
+      );
+    });
+  }, [payments, searchText, viewMode, recentViewedIds]);
+
+  // --- Render card ---
+  const renderPaymentCard = ({ item }: { item: Payment }) => (
+    <TouchableOpacity onPress={() => handlePaymentCardPress(item)}>
+      <View style={styles.card}>
+        {/* Row 1 */}
+        <View style={styles.row}>
+          <View style={styles.col}>
+            <Text style={styles.label}>Invoice</Text>
+            <Text style={styles.value}>{item.invoice_number}</Text>
           </View>
-
-          {/* Row 2: Customer | Method | Notes */}
-          <View style={styles.row}>
-            <View style={styles.col}>
-              <Text style={styles.label}>Customer</Text>
-              <Text style={styles.value}>{item.customer_name}</Text>
-            </View>
-
-            <View style={styles.verticalDivider} />
-
-            <View style={styles.col}>
-              <Text style={styles.label}>Method</Text>
-              <Text style={styles.value}>{item.method}</Text>
-            </View>
-
-            <View style={styles.verticalDivider} />
-
-            <View style={styles.col}>
-              <Text style={styles.label}>Notes</Text>
-              <Text style={styles.value} numberOfLines={2} ellipsizeMode="tail">
-                {item.notes || "-"}
-              </Text>
-            </View>
+          <View style={styles.col}>
+            <Text style={styles.label}>Amount</Text>
+            <Text style={styles.value}>{item.amount}</Text>
           </View>
-
-          {/* Row 3: Payment Date | Reference | Created At */}
-          <View style={styles.row}>
-            <View style={styles.col}>
-              <Text style={styles.label}>Payment Date</Text>
-              <Text style={styles.value}>
-                {item.payment_date
-                  ? new Date(item.payment_date).toLocaleDateString("en-IN")
-                  : "-"}
-              </Text>
-            </View>
-
-            <View style={styles.verticalDivider} />
-
-            <View style={styles.col}>
-              <Text style={styles.label}>Reference</Text>
-              <Text style={styles.value}>{item.reference || "-"}</Text>
-            </View>
-
-            <View style={styles.verticalDivider} />
-
-            <View style={styles.col}>
-              <Text style={styles.label}>Created At</Text>
-              <Text style={styles.value}>
-                {item.created_at
-                  ? new Date(item.created_at).toLocaleDateString("en-IN")
-                  : "-"}
-              </Text>
-            </View>
+          <View style={styles.col}>
+            <Text style={styles.label}>Status</Text>
+            <Text style={styles.value}>{item.status}</Text>
           </View>
         </View>
-      </TouchableOpacity>
-    );
-  };
 
-  const filteredPayments = useMemo(() => {
-    // RECENT VIEWn
-    if (viewMode === "recent") {
-      return recentViewedIds
-        .map((id) => payments.find((p) => p.id === id))
-        .filter((p): p is Payment => Boolean(p));
-    }
+        {/* Row 2 */}
+        <View style={styles.row}>
+          <View style={styles.col}>
+            <Text style={styles.label}>Customer</Text>
+            <Text style={styles.value}>{item.customer_name}</Text>
+          </View>
+          <View style={styles.col}>
+            <Text style={styles.label}>Method</Text>
+            <Text style={styles.value}>{item.method}</Text>
+          </View>
+          <View style={styles.col}>
+            <Text style={styles.label}>Notes</Text>
+            <Text style={styles.value}>{item.notes || "-"}</Text>
+          </View>
+        </View>
 
-    // ALL VIEW
-    if (!appliedFilter) return payments;
-
-    const { field, operator, value } = appliedFilter;
-
-    return payments.filter((p: any) => {
-      const fieldValue = p[field];
-      if (fieldValue == null) return false;
-
-      switch (operator) {
-        case "equals":
-          return String(fieldValue).toLowerCase() === value.toLowerCase();
-        case "contains":
-          return String(fieldValue).toLowerCase().includes(value.toLowerCase());
-        case "greater_than":
-          return Number(fieldValue) > Number(value);
-        case "less_than":
-          return Number(fieldValue) < Number(value);
-        default:
-          return true;
-      }
-    });
-  }, [payments, appliedFilter, viewMode, recentViewedIds]);
-
-
-  const applyLocalFilter = (filter: AppliedFilter) => {
-    setAppliedFilter(filter);
-  };
+        {/* Row 3 */}
+        <View style={styles.row}>
+          <View style={styles.col}>
+            <Text style={styles.label}>Payment Date</Text>
+            <Text style={styles.value}>{formatDate(item.payment_date)}</Text>
+          </View>
+          <View style={styles.col}>
+            <Text style={styles.label}>Reference</Text>
+            <Text style={styles.value}>{item.reference || "-"}</Text>
+          </View>
+          <View style={styles.col}>
+            <Text style={styles.label}>Created At</Text>
+            <Text style={styles.value}>{formatDate(item.created_at)}</Text>
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: "#FFF" }}>
       <Header />
 
+      {/* Header with direct search */}
       <HeaderSection
         title="What services do you need?"
         buttonText="+ New Payment"
         onButtonClick={handleCreateNewPayment}
-        onSearchPress={() => setFilterVisible(true)} //  ADD
+        searchValue={searchText}
+        onSearchChange={setSearchText}
       />
 
-      {/* Section Header */}
+      {/* Section Header + Dropdown */}
       <View style={styles.sectionHeader}>
         <View style={styles.headerRow}>
           <View>
@@ -326,21 +259,20 @@ const Payments: React.FC = () => {
         </View>
       </View>
 
-      {/* List */}
+
+      {/* Payments List */}
       <FlatList
         data={filteredPayments}
         keyExtractor={(item) => item.id}
         renderItem={renderPaymentCard}
         contentContainerStyle={{ padding: 12, paddingBottom: 80 }}
-      />
-      <FilterModal
-        visible={filterVisible}
-        module="payments" // ✅ IMPORTANT
-        onClose={() => setFilterVisible(false)}
-        onApply={(filter) => {
-          setAppliedFilter(filter);
-          applyLocalFilter(filter);
-        }}
+        ListEmptyComponent={
+          !loading ? (
+            <Text style={{ textAlign: "center", marginTop: 20 }}>
+              No payments found.
+            </Text>
+          ) : null
+        }
       />
     </View>
   );
@@ -348,11 +280,14 @@ const Payments: React.FC = () => {
 
 export default Payments;
 
+
+
+
 // --- Styles: same as Quotes / Feedback with divider ---
 const styles = StyleSheet.create({
   sectionHeader: {
     paddingHorizontal: 16,
-    paddingTop: 10,
+    
     backgroundColor: "#FFF",
   },
   headerRow: {

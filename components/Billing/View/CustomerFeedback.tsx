@@ -1,4 +1,4 @@
-import FilterModal, { AppliedFilter } from "@/components/common/FilterModal";
+
 import { customerFeedbackService } from "@/src/api/auth";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 import { Ionicons } from "@expo/vector-icons";
@@ -33,10 +33,8 @@ export interface CustomerFeedback {
 const CustomerFeedback: React.FC = () => {
   const [feedbacks, setFeedbacks] = useState<CustomerFeedback[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [filterVisible, setFilterVisible] = useState(false);
-  const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(
-    null
-  );
+const [searchText, setSearchText] = useState("");
+;
   const navigation =
     useNavigation<NativeStackNavigationProp<SearchMenuStackParamList>>();
 
@@ -177,61 +175,55 @@ const CustomerFeedback: React.FC = () => {
     );
   };
 
-  const applyLocalFilter = (filter: AppliedFilter) => {
-    setAppliedFilter(filter);
-  };
 
-  const filteredFeedbacks = useMemo(() => {
-    let data = feedbacks;
 
-    if (viewMode === "recent") {
-      data = data.filter((fb) => recentViewedIds.includes(fb.id));
-    }
+ const filteredFeedbacks = useMemo(() => {
+  return feedbacks.filter((fb) => {
+    const text = searchText.toLowerCase();
 
-    if (!appliedFilter) return data;
+    // Include recent view filtering if needed
+    if (viewMode === "recent" && !recentViewedIds.includes(fb.id)) return false;
 
-    const { field, operator, value } = appliedFilter;
+    // Search across all fields displayed in the card
+    const submittedAtStr = fb.submitted_at
+      ? new Date(fb.submitted_at).toLocaleDateString("en-IN")
+      : "";
+    const updatedAtStr = fb.updated_at
+      ? new Date(fb.updated_at).toLocaleDateString("en-IN")
+      : "";
 
-    return data.filter((fb: any) => {
-      const fieldValue = fb[field];
-      if (fieldValue == null) return false;
-
-      switch (operator) {
-        case "equals":
-          return String(fieldValue).toLowerCase() === value.toLowerCase();
-
-        case "contains":
-          return String(fieldValue).toLowerCase().includes(value.toLowerCase());
-
-        case "greater_than":
-          return Number(fieldValue) > Number(value);
-
-        case "less_than":
-          return Number(fieldValue) < Number(value);
-
-        default:
-          return true;
-      }
-    });
-  }, [feedbacks, appliedFilter, viewMode, recentViewedIds]);
+    return (
+      fb.organization_name?.toLowerCase().includes(text) ||
+      fb.work_order_number?.toLowerCase().includes(text) ||
+      String(fb.rating).includes(text) ||
+      (fb.comments?.toLowerCase().includes(text) ?? false) ||
+      fb.created_by_name?.toLowerCase().includes(text) ||
+      (fb.updated_by_name?.toLowerCase().includes(text) ?? false) ||
+      submittedAtStr.includes(text) ||
+      updatedAtStr.includes(text)
+    );
+  });
+}, [feedbacks, searchText, viewMode, recentViewedIds]);
 
   return (
     <View style={{ flex: 1, backgroundColor: "#FFF" }}>
       <Header />
 
-      <HeaderSection
-        title="What services do you need?"
-        buttonText="+ New Feedback"
-        onButtonClick={handleCreateNewFeedback}
-        onSearchPress={() => setFilterVisible(true)} //  ADD
-      />
+   <HeaderSection
+  title="What services do you need?"
+  buttonText="+ New Feedback"
+  onButtonClick={handleCreateNewFeedback}
+  searchValue={searchText}
+  onSearchChange={setSearchText} // DIRECT SEARCH
+/>
+
 
       {/* Section Header */}
       {/* Section Header */}
       <View style={styles.sectionHeader}>
         <View style={styles.headerRow}>
           <View>
-            <Text style={styles.subTitle}>FSM</Text>
+            <Text style={styles.subTitle}>BILLING</Text>
             <Text style={styles.title}>Customer Feedback</Text>
             <Text style={styles.subtitle}>
               {loading ? "Loading..." : "Updated just now"}
@@ -287,15 +279,7 @@ const CustomerFeedback: React.FC = () => {
         contentContainerStyle={{ padding: 12, paddingBottom: 80 }}
         showsVerticalScrollIndicator={false}
       />
-      <FilterModal
-        visible={filterVisible}
-        module="customer_feedback" // ✅ IMPORTANT
-        onClose={() => setFilterVisible(false)}
-        onApply={(filter) => {
-          setAppliedFilter(filter);
-          applyLocalFilter(filter);
-        }}
-      />
+      
     </View>
   );
 };
