@@ -6,68 +6,62 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import Header from "../../common/Header";
 import HeaderSection from "../../common/HeaderSection";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
-import { api } from "@/src/api/cilent";
-import FilterModal, { AppliedFilter } from "@/components/common/FilterModal";
 import { Ionicons } from "@expo/vector-icons";
 import { fetchTrips, fetchTripStatusesFromAPI } from "@/database/local/triplog";
 
-
+type NavigationProp =
+  NativeStackNavigationProp<SearchMenuStackParamList, "TripLog">;
 
 type Trip = {
   id: string;
   trip_id?: string;
-  timestamp: string;
-
+  timestamp: number;
   latitude: string | number;
   longitude: string | number;
-
   job_status_id?: string;
-
-
   work_order_number?: string;
   site_name?: string;
-
 };
 
-
-type NavigationProp = NativeStackNavigationProp<SearchMenuStackParamList, "TripLog">;
 type TripStatus = { id: string; name: string };
+type ViewMode = "all" | "recent";
 
 export default function TripLog() {
   const navigation = useNavigation<NavigationProp>();
+
   const [trips, setTrips] = useState<Trip[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [filterVisible, setFilterVisible] = useState(false);
-  const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(null);
+  const [loading, setLoading] = useState(true);
   const [offlineMode, setOfflineMode] = useState(false);
-
   const [tripStatuses, setTripStatuses] = useState<TripStatus[]>([]);
+
+  const [searchText, setSearchText] = useState("");
+  const [viewMode, setViewMode] = useState<ViewMode>("all");
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'all' | 'recent'>('all');
-  const [recentlyViewedTrips, setRecentlyViewedTrips] = useState<Trip[]>([]);
+  const [recentTrips, setRecentTrips] = useState<Trip[]>([]);
 
-
+  // =========================
+  // Load Trips
+  // =========================
   useEffect(() => {
     const loadTrips = async () => {
       setLoading(true);
       try {
         const res = await fetchTrips();
-        // Ensure timestamp is number
-        const normalizedTrips = (res.data || []).map(trip => ({
-          ...trip,
-          timestamp: trip.timestamp ? new Date(trip.timestamp).getTime() : Date.now(),
+        const normalized = (res.data || []).map((t: any) => ({
+          ...t,
+          timestamp: t.timestamp
+            ? new Date(t.timestamp).getTime()
+            : Date.now(),
         }));
-        setTrips(normalizedTrips);
+        setTrips(normalized);
         setOfflineMode(res.offline);
-      } catch (err) {
-       
+      } catch {
         setTrips([]);
         setOfflineMode(true);
       } finally {
@@ -77,47 +71,56 @@ export default function TripLog() {
     loadTrips();
   }, []);
 
-  // Load statuses
+  // Load Statuses
   useEffect(() => {
-    const loadStatuses = async () => {
-      const statuses = await fetchTripStatusesFromAPI();
-      setTripStatuses(statuses);
-    };
-    loadStatuses();
+    fetchTripStatusesFromAPI().then(setTripStatuses);
   }, []);
 
+  const getStatusName = (id?: string | number) => {
+    if (!id) return "";
+    const found = tripStatuses.find((s) => s.id === id.toString());
+    return found ? found.name : id.toString();
+  };
 
+  // =========================
+  // 🔍 SEARCH + VIEW MODE
+  // =========================
+  const displayedTrips = trips
+    .filter((trip) =>
+      viewMode === "recent"
+        ? recentTrips.some((t) => t.id === trip.id)
+        : true
+    )
+    .filter((trip) => {
+      if (!searchText.trim()) return true;
 
+      const text = searchText.toLowerCase();
+      return (
+        trip.trip_id?.toLowerCase().includes(text) ||
+        trip.work_order_number?.toLowerCase().includes(text) ||
+        trip.site_name?.toLowerCase().includes(text) ||
+        getStatusName(trip.job_status_id).toLowerCase().includes(text) ||
+        `${trip.latitude},${trip.longitude}`.toLowerCase().includes(text)
+      );
+    });
 
+  return (
+    <View style={{ flex: 1, backgroundColor: "#fff" }}>
+      <Header />
 
-  const filteredTrips = trips.filter((trip) => {
-    if (!appliedFilter || !appliedFilter.field) return true;
+      {/* 🔍 DIRECT SEARCH */}
+      <HeaderSection
+        title="Trip Logs"
+        buttonText="+ New Logs"
+        onButtonClick={() =>
+          navigation.navigate("TripLogForm", { mode: "create" })
+        }
+        searchValue={searchText}
+        onSearchChange={setSearchText}
+      />
 
-    const rawValue = trip[appliedFilter.field as keyof Trip];
-    if (!rawValue) return false;
-
-    return rawValue.toString().toLowerCase().includes(appliedFilter.value.toLowerCase());
-  });
-  const displayedTrips = trips.filter((trip) => {
-    // 1️ Filter by appliedFilter
-    let matchesFilter = true;
-    if (appliedFilter?.field) {
-      const rawValue = trip[appliedFilter.field as keyof Trip];
-      matchesFilter = rawValue
-        ? rawValue.toString().toLowerCase().includes(appliedFilter.value.toLowerCase())
-        : false;
-    }
-
-    // 2 Filter by viewMode
-    let matchesViewMode = true;
-    if (viewMode === 'recent') {
-      matchesViewMode = recentlyViewedTrips.some((t) => t.id === trip.id);
-    }
-
-    return matchesFilter && matchesViewMode;
-  });
-
-  {
+      <ScrollView style={styles.container}>
+         {
     offlineMode && (
       <Text style={{ color: "red", fontSize: 12, marginBottom: 10 }}>
         Offline mode - Showing last 14 days trip logs only
@@ -125,33 +128,17 @@ export default function TripLog() {
     )
   }
 
-  const getStatusName = (statusId?: string | number) => {
-    if (!statusId) return "";
-    const idStr = statusId.toString();
-    const status = tripStatuses.find(s => s.id === idStr);
-    return status ? status.name : idStr;
-  };
-
-
-  return (
-    <View style={{ flex: 1, backgroundColor: "#fff" }}>
-      <Header />
-      <HeaderSection
-        title="What services do you need?"
-        buttonText="+ New Logs"
-        onButtonClick={() => navigation.navigate("TripLogForm", { mode: "create" })}
-
-        onSearchPress={() => setFilterVisible(true)} // Open filter
-      />
-
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        {/* Header */}
         <View style={styles.headerRow}>
-          <View style={styles.header}>
-            <Text style={styles.headerTag}>FSM</Text>
+          <View>
+              <Text style={styles.subTitle}>FSM</Text>
             <Text style={styles.headerTitle}>Trip Logs</Text>
-            <Text style={styles.headerMeta}>{trips.length} logs - Updated just now</Text>
+            <Text style={styles.headerMeta}>
+              {displayedTrips.length} logs • Updated just now
+            </Text>
           </View>
-          <View style={{ position: 'relative' }}>
+
+       <View style={{ position: 'relative' }}>
             <TouchableOpacity
               style={styles.filterBtn}
               onPress={() => setDropdownOpen((prev) => !prev)}
@@ -187,6 +174,7 @@ export default function TripLog() {
             )}
           </View>
         </View>
+
         {loading ? (
           <ActivityIndicator size="large" color="#6B4EFF" />
         ) : (
@@ -195,25 +183,26 @@ export default function TripLog() {
               key={trip.id}
               style={styles.card}
               onPress={() => {
-                // Mark this trip as recently viewed
-                setRecentlyViewedTrips((prev) => {
-                  const alreadyViewed = prev.find((t) => t.id === trip.id);
-                  if (alreadyViewed) return prev;
-                  return [trip, ...prev].slice(0, 20); // Keep last 20
+                setRecentTrips((prev) => {
+                  const updated = [
+                    trip,
+                    ...prev.filter((t) => t.id !== trip.id),
+                  ];
+                  return updated.slice(0, 20);
                 });
 
-                navigation.navigate("TripLogForm", { mode: "view", data: trip });
+                navigation.navigate("TripLogForm", {
+                  mode: "view",
+                  data: trip,
+                });
               }}
-
             >
-              {/* Trip ID + Date */}
               <View style={styles.rowBetween}>
-                <View style={{ flex: 3 }}>
+                <View>
                   <Text style={styles.label}>Trip ID</Text>
                   <Text style={styles.value}>{trip.trip_id || "-"}</Text>
                 </View>
-
-                <View style={{ flex: 1 }}>
+                <View>
                   <Text style={styles.label}>Date</Text>
                   <Text style={styles.value}>
                     {new Date(trip.timestamp).toLocaleDateString()}
@@ -221,56 +210,45 @@ export default function TripLog() {
                 </View>
               </View>
 
-              {/* Work Order + Site + Status */}
               <View style={styles.rowBetween}>
-                <View style={styles.thirdCol}>
+                <View>
                   <Text style={styles.smallLabel}>Work Order</Text>
-                  <Text style={styles.smallValue}>{trip.work_order_number || "-"}</Text>
-                </View>
-
-                <View style={styles.thirdCol}>
-                  <Text style={styles.smallLabel}>Site</Text>
                   <Text style={styles.smallValue}>
-                    {trip.site_name || `${trip.latitude}, ${trip.longitude}`}
+                    {trip.work_order_number || "-"}
                   </Text>
                 </View>
 
-                <View style={styles.thirdCol}>
+                <View>
+                  <Text style={styles.smallLabel}>Site</Text>
+                  <Text style={styles.smallValue}>
+                    {trip.site_name ||
+                      `${trip.latitude}, ${trip.longitude}`}
+                  </Text>
+                </View>
+
+                <View>
                   <Text style={styles.smallLabel}>Status</Text>
                   <Text style={styles.smallValue}>
                     {getStatusName(trip.job_status_id)}
                   </Text>
-
                 </View>
               </View>
-
-
-
             </TouchableOpacity>
-
           ))
         )}
 
-        <FilterModal
-          visible={filterVisible}
-          module="trip_logs" // pick the right module for filtering TripLogs
-          onClose={() => setFilterVisible(false)}
-          onApply={(filter) => {
-            setAppliedFilter(filter);
-            setFilterVisible(false);
-          }}
-        />
-
-        <View style={{ height: 30 }} />
       </ScrollView>
     </View>
   );
 }
 
+
+
+
 const styles = StyleSheet.create({
   container: {
-    padding: 21,
-    paddingBottom: 40,
+    padding: 12,
+    paddingBottom: 90,
   },
   header: {
     marginBottom: 0,
@@ -395,5 +373,12 @@ const styles = StyleSheet.create({
     color: "#212121",
     fontSize: 13,
     fontWeight: "500",
+  },
+    subTitle: {
+    color: "#6234E2",
+    fontSize: 12,
+    fontWeight: "600",
+    marginBottom: 4,
+
   },
 });

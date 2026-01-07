@@ -1,4 +1,3 @@
-import FilterModal, { AppliedFilter } from "@/components/common/FilterModal";
 import Header from "@/components/common/Header";
 import HeaderSection from "@/components/common/HeaderSection";
 import { Account, accountsService } from "@/src/api/auth";
@@ -23,10 +22,7 @@ export default function AccountsScreen() {
 
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(false);
-  const [filterVisible, setFilterVisible] = useState(false);
-  const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(
-    null
-  );
+  const [searchText, setSearchText] = useState("");
 
   type ViewMode = "all" | "recent";
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -39,7 +35,6 @@ export default function AccountsScreen() {
       const data = await accountsService.getAll();
       setAccounts(data);
     } catch (err) {
-      console.error("Accounts fetch error:", err);
       Alert.alert("Error", "Failed to load accounts");
     } finally {
       setLoading(false);
@@ -50,9 +45,7 @@ export default function AccountsScreen() {
     fetchAccounts();
   }, []);
 
-  const handleApplyFilter = (filter: AppliedFilter) => {
-    setAppliedFilter(filter);
-  };
+  /* ================= GLOBAL SEARCH (ALL FIELDS) ================= */
 
   const filteredAccounts = useMemo(() => {
     let data = accounts;
@@ -61,41 +54,31 @@ export default function AccountsScreen() {
       data = data.filter((acc) => recentViewedIds.includes(acc.id));
     }
 
-    if (!appliedFilter) return data;
+    if (!searchText.trim()) return data;
 
-    const { field, operator, value } = appliedFilter;
+    const keyword = searchText.toLowerCase();
 
-    return data.filter((acc: any) => {
-      const fieldValue = acc[field];
-      if (fieldValue == null) return false;
+    return data.filter((acc: any) =>
+      [
+        acc.name,
+        acc.status,
+        acc.type,
+        acc.industry,
+        acc.credit_limit,
+        acc.total_revenue,
+        acc.customer_rating,
+      ]
+        .filter(Boolean)
+        .some((value) =>
+          String(value).toLowerCase().includes(keyword)
+        )
+    );
+  }, [accounts, searchText, viewMode, recentViewedIds]);
 
-      switch (operator) {
-        case "contains":
-          return String(fieldValue).toLowerCase().includes(value.toLowerCase());
-        case "equals":
-          return String(fieldValue).toLowerCase() === value.toLowerCase();
-        case "starts_with":
-          return String(fieldValue)
-            .toLowerCase()
-            .startsWith(value.toLowerCase());
-        case "greater_than":
-          return Number(fieldValue) > Number(value);
-        case "less_than":
-          return Number(fieldValue) < Number(value);
-        default:
-          return true;
-      }
-    });
-  }, [accounts, appliedFilter, viewMode, recentViewedIds]);
-
-  // ✅ Create New Account (FIXED)
   const handleCreateNewAccount = () => {
-    navigation.navigate("CreateAccount", {
-      mode: "create",
-    });
+    navigation.navigate("CreateAccount", { mode: "create" });
   };
 
-  // ✅ Open Account
   const handleAccountPress = (account: Account) => {
     setRecentViewedIds((prev) =>
       prev.includes(account.id) ? prev : [account.id, ...prev].slice(0, 10)
@@ -110,11 +93,14 @@ export default function AccountsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: "#FFF" }}>
       <Header />
+
+      {/* ✅ DIRECT SEARCH */}
       <HeaderSection
         title="What services do you need?"
         buttonText="+ New Accounts"
         onButtonClick={handleCreateNewAccount}
-        onSearchPress={() => setFilterVisible(true)}
+        searchValue={searchText}
+        onSearchChange={setSearchText}
       />
 
       <ScrollView style={styles.container}>
@@ -124,7 +110,7 @@ export default function AccountsScreen() {
             <Text style={styles.crmText}>CRM</Text>
             <Text style={styles.pageTitle}>Accounts</Text>
             <Text style={styles.subTitle}>
-              {accounts.length} items - Updated just now
+              {filteredAccounts.length} items
             </Text>
           </View>
 
@@ -136,7 +122,7 @@ export default function AccountsScreen() {
               <Text style={styles.filterText}>
                 {viewMode === "all" ? "All" : "Recently Viewed"}
               </Text>
-              <Ionicons name="chevron-down-outline" size={16} color="#444" />
+              <Ionicons name="chevron-down-outline" size={16} />
             </TouchableOpacity>
 
             {dropdownOpen && (
@@ -238,12 +224,7 @@ export default function AccountsScreen() {
           ))
         )}
 
-        <FilterModal
-          visible={filterVisible}
-          module="accounts"
-          onClose={() => setFilterVisible(false)}
-          onApply={handleApplyFilter}
-        />
+
       </ScrollView>
     </View>
   );

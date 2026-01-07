@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -14,10 +14,7 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 import { api } from "@/src/api/cilent";
-import FilterModal, { AppliedFilter } from "@/components/common/FilterModal";
 import { Ionicons } from "@expo/vector-icons";
-
-
 
 // --- Types ---
 export interface Invoice {
@@ -27,18 +24,17 @@ export interface Invoice {
   status_name: string;
   customer_name: string;
   total: number;
-  updated_At: string; // updated_by_name
+  updated_At: string;
 }
 
 // --- Main Component ---
 const Invoices: React.FC = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [filterVisible, setFilterVisible] = useState(false);
-  const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(null);
-  const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
-  const [viewMode, setViewMode] = useState<'all' | 'recent'>('all');
+  const [searchText, setSearchText] = useState("");
+  const [viewMode, setViewMode] = useState<"all" | "recent">("all");
   const [recentlyViewedIds, setRecentlyViewedIds] = useState<string[]>([]);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const navigation =
     useNavigation<NativeStackNavigationProp<SearchMenuStackParamList>>();
@@ -47,13 +43,9 @@ const Invoices: React.FC = () => {
     fetchInvoices();
   }, []);
 
-  // --------------------------
-  // API CALL
-  // --------------------------
   const fetchInvoices = async () => {
     try {
       setLoading(true);
-
       const list = await api.get<any[]>("/invoices");
 
       const formatted: Invoice[] = list.map((inv: any) => ({
@@ -67,7 +59,6 @@ const Invoices: React.FC = () => {
       }));
 
       setInvoices(formatted);
-
     } catch (error) {
       console.error("Error fetching invoices:", error);
       Alert.alert("Error", "Failed to load invoices");
@@ -76,121 +67,91 @@ const Invoices: React.FC = () => {
     }
   };
 
-
   const handleCreateNewInvoice = () => {
-    navigation.navigate("InvoicesForm", {
-      mode: "create",
-      data: null,
-    });
+    navigation.navigate("InvoicesForm", { mode: "create", data: null });
   };
 
   const handleInvoiceCardPress = (invoice: Invoice) => {
-    // Navigate
-    navigation.navigate("InvoicesForm", {
-      mode: "view",
-      data: invoice,
-    });
+    navigation.navigate("InvoicesForm", { mode: "view", data: invoice });
 
-    // Track recently viewed
     setRecentlyViewedIds((prev) => {
       const updated = [invoice.id, ...prev.filter((id) => id !== invoice.id)];
-      return updated.slice(0, 20); // Keep last 20 viewed invoices
+      return updated.slice(0, 20); // keep last 20
     });
   };
 
-
-
   const formatDate = (dateStr: string) => {
-    if (!dateStr || dateStr === "-") return "-";   // prevent invalid date
-
+    if (!dateStr || dateStr === "-") return "-";
     const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return "-";         // prevent broken date
-
+    if (isNaN(date.getTime())) return "-";
     const d = String(date.getDate()).padStart(2, "0");
     const m = String(date.getMonth() + 1).padStart(2, "0");
     const y = date.getFullYear();
     return `${d}/${m}/${y}`;
   };
-  const handleApplyFilter = (filter: AppliedFilter) => {
-    setAppliedFilter(filter);
-  };
-  const filteredInvoices = appliedFilter
-    ? invoices.filter((inv) => {
-      const fieldValue = (inv as any)[appliedFilter.field];
-      if (!fieldValue) return false;
 
-      switch (appliedFilter.operator) {
-        case 'equals':
-          return String(fieldValue).toLowerCase() === appliedFilter.value.toLowerCase();
-        case 'contains':
-          return String(fieldValue).toLowerCase().includes(appliedFilter.value.toLowerCase());
-        case 'startsWith':
-          return String(fieldValue).toLowerCase().startsWith(appliedFilter.value.toLowerCase());
-        case 'endsWith':
-          return String(fieldValue).toLowerCase().endsWith(appliedFilter.value.toLowerCase());
-        case 'greaterThan':
-          return Number(fieldValue) > Number(appliedFilter.value);
-        case 'lessThan':
-          return Number(fieldValue) < Number(appliedFilter.value);
-        default:
-          return true;
-      }
-    })
-    : invoices;
+  // --- Direct Search Filtering ---
+  const filteredInvoices = useMemo(() => {
+    return invoices.filter((inv) => {
+      const text = searchText.toLowerCase();
 
-  const displayedInvoices =
-    viewMode === 'recent'
-      ? filteredInvoices.filter((inv) => recentlyViewedIds.includes(inv.id))
-      : filteredInvoices;
+      if (viewMode === "recent" && !recentlyViewedIds.includes(inv.id))
+        return false;
 
-  const renderInvoiceCard = ({ item }: { item: Invoice }) => {
-    return (
-      <TouchableOpacity onPress={() => handleInvoiceCardPress(item)}>
+      return (
+        inv.invoice_number.toLowerCase().includes(text) ||
+        inv.customer_name.toLowerCase().includes(text) ||
+        inv.status_name.toLowerCase().includes(text) ||
+        inv.currency.toLowerCase().includes(text) ||
+        String(inv.total).includes(text) ||
+        formatDate(inv.updated_At).includes(text)
+      );
+    });
+  }, [invoices, searchText, viewMode, recentlyViewedIds]);
 
-        <View style={styles.card}>
-          {/* Row 1 */}
-          <View style={styles.row}>
-            <View style={styles.col}>
-              <Text style={styles.label}>Invoice Number</Text>
-              <Text style={styles.value}>{item.invoice_number}</Text>
-            </View>
-
-            <View style={styles.col}>
-              <Text style={styles.label}>Customer</Text>
-              <Text style={styles.value}>{item.customer_name}</Text>
-            </View>
+  const renderInvoiceCard = ({ item }: { item: Invoice }) => (
+    <TouchableOpacity onPress={() => handleInvoiceCardPress(item)}>
+      <View style={styles.card}>
+        {/* Row 1 */}
+        <View style={styles.row}>
+          <View style={styles.col}>
+            <Text style={styles.label}>Invoice Number</Text>
+            <Text style={styles.value}>{item.invoice_number}</Text>
           </View>
-
-          {/* Row 2 */}
-          <View style={styles.row}>
-            <View style={styles.col}>
-              <Text style={styles.label}>Status</Text>
-              <Text style={styles.value}>{item.status_name}</Text>
-            </View>
-
-            <View style={styles.col}>
-              <Text style={styles.label}>Currency</Text>
-              <Text style={styles.value}>{item.currency}</Text>
-            </View>
-          </View>
-
-          {/* Row 3 */}
-          <View style={styles.row}>
-            <View style={styles.col}>
-              <Text style={styles.label}>Updated By</Text>
-              <Text style={styles.value}>{formatDate(item.updated_At)}</Text>
-
-            </View>
-
-            <View style={styles.col}>
-              <Text style={styles.label}>Total</Text>
-              <Text style={styles.value}>{item.currency} {item.total}</Text>
-            </View>
+          <View style={styles.col}>
+            <Text style={styles.label}>Customer</Text>
+            <Text style={styles.value}>{item.customer_name}</Text>
           </View>
         </View>
-      </TouchableOpacity>
-    );
-  };
+
+        {/* Row 2 */}
+        <View style={styles.row}>
+          <View style={styles.col}>
+            <Text style={styles.label}>Status</Text>
+            <Text style={styles.value}>{item.status_name}</Text>
+          </View>
+          <View style={styles.col}>
+            <Text style={styles.label}>Currency</Text>
+            <Text style={styles.value}>{item.currency}</Text>
+          </View>
+        </View>
+
+        {/* Row 3 */}
+        <View style={styles.row}>
+          <View style={styles.col}>
+            <Text style={styles.label}>Updated At</Text>
+            <Text style={styles.value}>{formatDate(item.updated_At)}</Text>
+          </View>
+          <View style={styles.col}>
+            <Text style={styles.label}>Total</Text>
+            <Text style={styles.value}>
+              {item.currency} {item.total}
+            </Text>
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: "#FFF" }}>
@@ -200,13 +161,14 @@ const Invoices: React.FC = () => {
         title="What services do you need?"
         buttonText="+ New Invoice"
         onButtonClick={handleCreateNewInvoice}
-        onSearchPress={() => setFilterVisible(true)}
-
+        searchValue={searchText}
+        onSearchChange={setSearchText} // DIRECT SEARCH
       />
+
       <ScrollView style={styles.container}>
         <View style={styles.headerRow}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.subTitle}>FSM</Text>
+            <Text style={styles.subTitle}>BILLING</Text>
             <Text style={styles.title}>Invoices</Text>
             <Text style={styles.subtitle}>
               {loading ? "Loading..." : "Updated just now"}
@@ -249,7 +211,7 @@ const Invoices: React.FC = () => {
           </View>
         </View>
         <FlatList
-          data={displayedInvoices}
+          data={filteredInvoices}
           keyExtractor={(item) => item.id}
           renderItem={renderInvoiceCard}
           ListEmptyComponent={
@@ -262,12 +224,8 @@ const Invoices: React.FC = () => {
         />
 
 
-        <FilterModal
-          visible={filterVisible}
-          module="invoices"
-          onClose={() => setFilterVisible(false)}
-          onApply={handleApplyFilter}
-        />
+
+
 
       </ScrollView>
     </View>
@@ -283,7 +241,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
     paddingHorizontal: 16,
-    paddingTop: 4,
+    
   },
 
   title: {
@@ -293,7 +251,7 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
 
-    paddingTop: 10,
+    
     backgroundColor: "#FFF",
   },
   subTitle: {

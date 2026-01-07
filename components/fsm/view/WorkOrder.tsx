@@ -13,7 +13,6 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 import { api } from "@/src/api/cilent";
-import FilterModal, { AppliedFilter } from "@/components/common/FilterModal";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -34,8 +33,6 @@ export default function WorkOrderScreen() {
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
-  const [filterVisible, setFilterVisible] = useState(false);
-  const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'all' | 'recent'>('all');
   const [recentIds, setRecentIds] = useState<string[]>([]);
@@ -91,6 +88,7 @@ export default function WorkOrderScreen() {
     navigation.navigate("CreateWorkorder", { mode: "create" });
   };
 
+  // Render each card
   const renderWorkOrderCard = ({ item }: { item: WorkOrder }) => (
     <TouchableOpacity onPress={() => handleCardPress(item)}>
       <View style={styles.card}>
@@ -112,58 +110,12 @@ export default function WorkOrderScreen() {
         <View style={styles.row}>
           <View style={styles.col}>
             <Text style={styles.label}>Status</Text>
-            <View
-              style={[
-                styles.badge,
-                item.status_name === "Completed"
-                  ? styles.completed
-                  : item.status_name === "In Progress"
-                    ? styles.inProgress
-                    : styles.pending,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.badgeText,
-                  item.status_name === "Completed"
-                    ? styles.completedText
-                    : item.status_name === "In Progress"
-                      ? styles.inProgressText
-                      : styles.pendingText,
-                ]}
-              >
-                {item.status_name}
-              </Text>
-            </View>
+            <Text style={styles.value}>{item.status_name}</Text>
           </View>
-
           <View style={styles.col}>
             <Text style={styles.label}>Priority</Text>
-            <View
-              style={[
-                styles.badge,
-                item.priority_name === "High"
-                  ? styles.high
-                  : item.priority_name === "Medium"
-                    ? styles.medium
-                    : styles.low,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.badgeText,
-                  item.priority_name === "High"
-                    ? styles.highText
-                    : item.priority_name === "Medium"
-                      ? styles.mediumText
-                      : styles.lowText,
-                ]}
-              >
-                {item.priority_name}
-              </Text>
-            </View>
+            <Text style={styles.value}>{item.priority_name}</Text>
           </View>
-
           <View style={styles.col}>
             <Text style={styles.label}>Schedule</Text>
             <Text style={styles.value}>
@@ -177,27 +129,28 @@ export default function WorkOrderScreen() {
     </TouchableOpacity>
   );
 
+  // Direct search filter
   const filteredWorkOrders = workOrders.filter((wo) => {
-    const matchesSearch =
-      (wo.work_order_number?.toLowerCase().includes(searchText.toLowerCase()) ?? false) ||
-      (wo.title?.toLowerCase().includes(searchText.toLowerCase()) ?? false) ||
-      (wo.service_type?.toLowerCase().includes(searchText.toLowerCase()) ?? false);
+    const text = searchText.toLowerCase();
 
-    if (!matchesSearch) return false;
+    // Convert scheduled_at to string if exists
+    const scheduleStr = wo.scheduled_at
+      ? new Date(wo.scheduled_at).toLocaleDateString("en-IN").toLowerCase()
+      : "";
 
-    if (!appliedFilter || !appliedFilter.field) return true;
-
-    const rawValue = wo[appliedFilter.field as keyof WorkOrder];
-    if (!rawValue) return false;
-
-    return rawValue
-      .toString()
-      .toLowerCase()
-      .includes(appliedFilter.value.toLowerCase());
+    return (
+      (wo.work_order_number?.toLowerCase().includes(text) ?? false) ||
+      (wo.title?.toLowerCase().includes(text) ?? false) ||
+      (wo.service_type?.toLowerCase().includes(text) ?? false) ||
+      (wo.status_name?.toLowerCase().includes(text) ?? false) ||
+      (wo.priority_name?.toLowerCase().includes(text) ?? false) ||
+      scheduleStr.includes(text)
+    );
   });
 
-  let displayedWorkOrders = [...filteredWorkOrders];
 
+  // Apply recently viewed filter if needed
+  let displayedWorkOrders = [...filteredWorkOrders];
   if (viewMode === 'recent') {
     displayedWorkOrders = displayedWorkOrders.filter(wo => recentIds.includes(wo.id));
     displayedWorkOrders.sort((a, b) => recentIds.indexOf(a.id) - recentIds.indexOf(b.id));
@@ -210,7 +163,8 @@ export default function WorkOrderScreen() {
         title="Work Orders"
         buttonText="+ New Work Order"
         onButtonClick={handleCreateNew}
-        onSearchPress={() => setFilterVisible(true)}
+        searchValue={searchText}
+        onSearchChange={setSearchText}
       />
 
       <View style={styles.headerRow}>
@@ -267,19 +221,11 @@ export default function WorkOrderScreen() {
           contentContainerStyle={{ padding: 12 }}
         />
       )}
-
-      <FilterModal
-        visible={filterVisible}
-        module="work_orders"
-        onClose={() => setFilterVisible(false)}
-        onApply={(filter) => {
-          setAppliedFilter(filter);
-          setFilterVisible(false);
-        }}
-      />
     </View>
   );
 }
+
+
 
 
 const styles = StyleSheet.create({

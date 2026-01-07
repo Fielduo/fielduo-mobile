@@ -15,36 +15,31 @@ import { Inventory } from "@/types/Worker";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 import { api } from "@/src/api/cilent";
 import { Ionicons } from "@expo/vector-icons";
-import FilterModal, { AppliedFilter } from "@/components/common/FilterModal";
+
+type ViewMode = "all" | "recent";
 
 export default function InventoryScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<SearchMenuStackParamList>>();
 
   const [inventoryData, setInventoryData] = useState<Inventory[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  type ViewMode = 'all' | 'recent';
-
-  const [filterOpen, setFilterOpen] = useState<boolean>(false);
+  const [filteredInventory, setFilteredInventory] = useState<Inventory[]>([]);
   const [recentInventory, setRecentInventory] = useState<Inventory[]>([]);
+  const [searchText, setSearchText] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
-  const [viewMode, setViewMode] = useState<ViewMode>('all');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("all");
 
-  // 🔹 Fetch inventory list from API
+  /* ---------------- FETCH INVENTORY ---------------- */
   const fetchInventory = async () => {
     try {
       setLoading(true);
-      setError(null);
-
-
       const data = await api.get<Inventory[]>("/inventory");
-
       setInventoryData(data || []);
-    } catch (err: any) {
+      setFilteredInventory(data || []);
+    } catch (err) {
       console.error("Error fetching inventory:", err);
-      setError(err?.message || "Failed to load inventory");
     } finally {
       setLoading(false);
     }
@@ -54,165 +49,156 @@ export default function InventoryScreen() {
     fetchInventory();
   }, []);
 
-  // 🔹 Navigate to view/edit inventory
-  const handleCardPress = (inventory: Inventory) => {
-    setRecentInventory((prev) => {
-      const exists = prev.find((i) => i.item_id === inventory.item_id);
-      if (exists) return prev;
+  /* ---------------- DIRECT SEARCH ---------------- */
+  useEffect(() => {
+    if (!searchText.trim()) {
+      setFilteredInventory(inventoryData);
+      return;
+    }
 
-      // latest first, max 5 items
-      return [inventory, ...prev].slice(0, 5);
-    });
+    const text = searchText.toLowerCase();
 
-    navigation.navigate("CreateInventory", { mode: "view", inventory });
-  };
+    const result = inventoryData.filter((item) =>
+      Object.values(item).some(
+        (val) =>
+          val &&
+          val.toString().toLowerCase().includes(text)
+      )
+    );
 
+    setFilteredInventory(result);
+  }, [searchText, inventoryData]);
 
-  // 🔹 Navigate to create new inventory
+  /* ---------------- VIEW MODE ---------------- */
+  const displayInventory =
+    viewMode === "all" ? filteredInventory : recentInventory;
+
+  /* ---------------- ACTIONS ---------------- */
   const handleCreateNew = () => {
     navigation.navigate("CreateInventory", { mode: "create" });
   };
 
+  const handleCardPress = (inventory: Inventory) => {
+    setRecentInventory((prev) => {
+      const exists = prev.find(
+        (i) => i.item_id === inventory.item_id
+      );
+      if (exists) return prev;
+      return [inventory, ...prev].slice(0, 5);
+    });
+
+    navigation.navigate("CreateInventory", {
+      mode: "view",
+      inventory,
+    });
+  };
+
   const getStockLabel = (qty: number | null) => {
-    if (qty === null || qty === undefined) return "N/A";
+    if (qty == null) return "N/A";
     if (qty === 0) return "Out of Stock";
     if (qty < 10) return "Low Stock";
     return "In Stock";
   };
 
   const isLowStock = (qty: number | null) =>
-    qty !== null && qty !== undefined && qty > 0 && qty < 10;
+    qty !== null && qty > 0 && qty < 10;
 
-  const renderInventoryCard = ({ item }: { item: Inventory }) => {
-    return (
-      <TouchableOpacity onPress={() => handleCardPress(item)}>
-        <View style={styles.card}>
-          {/* Row 1 */}
-          <View style={styles.row}>
-            <View style={styles.col}>
-              <Text style={styles.label}>Item Number</Text>
-              <Text style={styles.value}>{item.item_number ?? item.item_id}</Text>
-            </View>
-            <View style={styles.col}>
-              <Text style={styles.label}>Item Name</Text>
-              <Text style={styles.value}>{item.item_name}</Text>
-            </View>
-            <View style={styles.col}>
-              <Text style={styles.label}>Description</Text>
-              <Text style={styles.value}>
-                {item.item_description || "-"}
+  /* ---------------- CARD UI ---------------- */
+  const renderInventoryCard = ({ item }: { item: Inventory }) => (
+    <TouchableOpacity onPress={() => handleCardPress(item)}>
+      <View style={styles.card}>
+        <View style={styles.row}>
+          <View style={styles.col}>
+            <Text style={styles.label}>Item Number</Text>
+            <Text style={styles.value}>
+              {item.item_number ?? item.item_id}
+            </Text>
+          </View>
+          <View style={styles.col}>
+            <Text style={styles.label}>Item Name</Text>
+            <Text style={styles.value}>{item.item_name}</Text>
+          </View>
+          <View style={styles.col}>
+            <Text style={styles.label}>Description</Text>
+            <Text style={styles.value}>
+              {item.item_description || "-"}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.row}>
+          <View style={styles.col}>
+            <Text style={styles.label}>Category</Text>
+            <Text style={styles.value}>{item.category || "-"}</Text>
+          </View>
+
+          <View style={styles.col}>
+            <Text style={styles.label}>Stock</Text>
+            <View
+              style={[
+                styles.badge,
+                isLowStock(item.stock_quantity)
+                  ? styles.lowStock
+                  : styles.inStock,
+              ]}
+            >
+              <Text style={styles.badgeText}>
+                {getStockLabel(item.stock_quantity)}
               </Text>
             </View>
           </View>
 
-          {/* Row 2 */}
-          <View style={styles.row}>
-            <View style={styles.col}>
-              <Text style={styles.label}>Category</Text>
-              <Text style={styles.value}>{item.category || "-"}</Text>
-            </View>
-
-            {/* Stock Quantity Badge */}
-            <View style={styles.col}>
-              <Text style={styles.label}>Stock Quantity</Text>
-              <View
-                style={[
-                  styles.badge,
-                  isLowStock(item.stock_quantity)
-                    ? styles.lowStock
-                    : styles.inStock,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.badgeText,
-                    isLowStock(item.stock_quantity)
-                      ? styles.lowStockText
-                      : styles.inStockText,
-                  ]}
-                >
-                  {getStockLabel(item.stock_quantity)}
-                </Text>
-              </View>
-            </View>
-
-            {/* Status Badge */}
-            <View style={styles.col}>
-              <Text style={styles.label}>Status</Text>
-              <View
-                style={[
-                  styles.badge,
-                  item.status?.toLowerCase() === "discontinued"
-                    ? styles.discontinued
-                    : styles.active,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.badgeText,
-                    item.status?.toLowerCase() === "discontinued"
-                      ? styles.discontinuedText
-                      : styles.activeText,
-                  ]}
-                >
-                  {item.status || "N/A"}
-                </Text>
-              </View>
+          <View style={styles.col}>
+            <Text style={styles.label}>Status</Text>
+            <View
+              style={[
+                styles.badge,
+                item.status?.toLowerCase() === "discontinued"
+                  ? styles.discontinued
+                  : styles.active,
+              ]}
+            >
+              <Text style={styles.badgeText}>
+                {item.status || "N/A"}
+              </Text>
             </View>
           </View>
         </View>
-      </TouchableOpacity>
-    );
-  };
-  const displayInventory =
-    viewMode === 'all' ? inventoryData : recentInventory;
+      </View>
+    </TouchableOpacity>
+  );
 
-    const handleApplyFilter = (filter: AppliedFilter) => {
-  console.log("Applied Filter:", filter);
-
-  // 🔥 Example (client-side filter)
-  const filtered = inventoryData.filter((item: any) => {
-    const value = item[filter.field];
-
-    if (!value) return false;
-
-    return value
-      .toString()
-      .toLowerCase()
-      .includes(filter.value.toLowerCase());
-  });
-
-  setInventoryData(filtered);
-};
-
+  /* ---------------- UI ---------------- */
   return (
-    <View style={{ flex: 1, backgroundColor: '#FFF' }}>
+    <View style={{ flex: 1, backgroundColor: "#FFF" }}>
       <Header />
+
       <HeaderSection
         title="What services do you need?"
         buttonText="+ New Inventory"
         onButtonClick={handleCreateNew}
-        onSearchPress={() => setFilterOpen(true)} // ✅ SEARCH CLICK
+        searchValue={searchText}
+        onSearchChange={setSearchText}   // ✅ DIRECT SEARCH
       />
 
-      {/* Section header */}
       <View style={styles.headerRow}>
-        <View style={styles.sectionHeader}>
+        <View>
           <Text style={styles.subTitle}>FSM</Text>
           <Text style={styles.title}>Inventory</Text>
           <Text style={styles.subtitle}>
-            {inventoryData.length} item{inventoryData.length > 1 ? 's' : ''} • Updated just now
+            {displayInventory.length} items • Updated just now
           </Text>
         </View>
-        <View style={{ position: 'relative' }}>
+
+        <View style={{ position: "relative" }}>
           <TouchableOpacity
             style={styles.filterBtn}
-            onPress={() => setDropdownOpen((prev) => !prev)}
+            onPress={() => setDropdownOpen((p) => !p)}
           >
             <Text style={styles.filterText}>
-              {viewMode === 'all' ? 'All' : 'Recently Viewed'}
+              {viewMode === "all" ? "All" : "Recently Viewed"}
             </Text>
-            <Ionicons name="chevron-down-outline" size={16} color="#444" />
+            <Ionicons name="chevron-down-outline" size={16} />
           </TouchableOpacity>
 
           {dropdownOpen && (
@@ -220,7 +206,7 @@ export default function InventoryScreen() {
               <TouchableOpacity
                 style={styles.dropdownItem}
                 onPress={() => {
-                  setViewMode('all');
+                  setViewMode("all");
                   setDropdownOpen(false);
                 }}
               >
@@ -230,7 +216,7 @@ export default function InventoryScreen() {
               <TouchableOpacity
                 style={styles.dropdownItem}
                 onPress={() => {
-                  setViewMode('recent');
+                  setViewMode("recent");
                   setDropdownOpen(false);
                 }}
               >
@@ -240,19 +226,19 @@ export default function InventoryScreen() {
           )}
         </View>
       </View>
-      <FlatList
-        data={displayInventory}
-        keyExtractor={(item) => String(item.item_id)}
-        renderItem={renderInventoryCard}
-        contentContainerStyle={{ padding: 12 }}
-      />
-<FilterModal
-  visible={filterOpen}
-  module="inventory"
-  onClose={() => setFilterOpen(false)}
-  onApply={handleApplyFilter}
-/>
 
+      {loading ? (
+        <ActivityIndicator size="large" style={{ marginTop: 40 }} />
+      ) : (
+        <FlatList
+          data={displayInventory}
+          keyExtractor={(item, index) =>
+            `${item.item_id}-${index}`
+          }
+          renderItem={renderInventoryCard}
+          contentContainerStyle={{ padding: 12 }}
+        />
+      )}
     </View>
   );
 }

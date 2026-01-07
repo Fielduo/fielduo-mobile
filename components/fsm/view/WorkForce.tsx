@@ -17,7 +17,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 import { api } from "@/src/api/cilent";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import FilterModal, { AppliedFilter } from "@/components/common/FilterModal";
+
 
 
 
@@ -48,9 +48,8 @@ export default function WorkForce() {
     const [recentContacts, setRecentContacts] = useState<FieldWorker[]>([]);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const navigation = useNavigation<WorkForceNavigationProp>();
-    const [filterOpen, setFilterOpen] = useState(false);
-    const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(null);
-    const [filteredWorkers, setFilteredWorkers] = useState<FieldWorker[]>([]);
+
+    const [searchText, setSearchText] = useState("");
 
     // ✅ Fetch workforce from API
     const fetchWorkers = async () => {
@@ -59,44 +58,29 @@ export default function WorkForce() {
             const data = await api.get<FieldWorker[]>("/workerforce");
             setWorkers(data);
             setLoading(false);
-            setFilteredWorkers(data); // 🔥 default
+
         } catch (err) {
             console.error("Error fetching workforce:", err);
             setLoading(false);
         }
     };
 
-    useEffect(() => {
-        if (!appliedFilter) {
-            setFilteredWorkers(workers);
-            return;
-        }
+    const filteredWorkers = workers.filter((item) => {
+        const text = searchText.toLowerCase();
 
-        const { field, operator, value } = appliedFilter;
+        return (
+            item.full_name?.toLowerCase().includes(text) ||
+            item.email?.toLowerCase().includes(text) ||
+            item.mobile?.toLowerCase().includes(text) ||
+            item.city?.toLowerCase().includes(text) ||
+            item.skills?.toLowerCase().includes(text) ||
+            item.gender?.toLowerCase().includes(text) ||
+            item.availability?.toLowerCase().includes(text)
+        );
+    });
 
-        const result = workers.filter((item: any) => {
-            const itemValue = item[field];
-            if (!itemValue) return false;
 
-            if (operator === 'contains') {
-                return itemValue
-                    .toString()
-                    .toLowerCase()
-                    .includes(value.toLowerCase());
-            }
 
-            if (operator === '=') {
-                return itemValue.toString().toLowerCase() === value.toLowerCase();
-            }
-
-            if (operator === '>') return itemValue > value;
-            if (operator === '<') return itemValue < value;
-
-            return true;
-        });
-
-        setFilteredWorkers(result);
-    }, [appliedFilter, workers]);
 
     useEffect(() => {
         fetchWorkers();
@@ -227,8 +211,10 @@ export default function WorkForce() {
                 onButtonClick={() =>
                     navigation.navigate("WorkForceForm", { mode: "create" })
                 }
-                onSearchPress={() => setFilterOpen(true)} // ✅ SEARCH CLICK
+                searchValue={searchText}
+                onSearchChange={setSearchText}
             />
+
 
             <View style={styles.container}>
                 <View style={styles.headerRow}>
@@ -283,12 +269,7 @@ export default function WorkForce() {
                     keyExtractor={(item) => item.id}
                     showsVerticalScrollIndicator={false}
                 />
-                <FilterModal
-                    visible={filterOpen}
-                    module="workforce"
-                    onClose={() => setFilterOpen(false)}
-                    onApply={setAppliedFilter}
-                />
+
 
 
             </View>

@@ -1,16 +1,22 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+} from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import HeaderSection from "../../common/HeaderSection";
 import Header from "../../common/Header";
 import { api } from "@/src/api/cilent";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
-import FilterModal, { AppliedFilter } from "@/components/common/FilterModal";
 import { Ionicons } from "@expo/vector-icons";
 
-
 type NavigationProp = NativeStackNavigationProp<SearchMenuStackParamList>;
+type ViewMode = "all" | "recent";
 
 interface ServiceReportItem {
   id: string;
@@ -30,19 +36,21 @@ export default function ServiceReport() {
 
   const [reports, setReports] = useState<ServiceReportItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [filterVisible, setFilterVisible] = useState(false);
-  const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(null);
-const [dropdownOpen, setDropdownOpen] = useState(false);
-const [viewMode, setViewMode] = useState<'all' | 'recent'>('all');
-const [recentReportIds, setRecentReportIds] = useState<string[]>([]);
+  const [searchText, setSearchText] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("all");
+  const [recentReportIds, setRecentReportIds] = useState<string[]>([]);
 
+  // ==========================
+  // Fetch Reports
+  // ==========================
   const fetchReports = async () => {
     try {
       setLoading(true);
-      const data = await api.get<ServiceReportItem[]>("/service_reports"); // fetch from backend
+      const data = await api.get<ServiceReportItem[]>("/service_reports");
       setReports(data);
     } catch (err: any) {
-      console.error("❌ Error fetching reports:", err.response?.data || err.message);
+      console.error("❌ Error fetching reports:", err);
       Alert.alert("Error", "Failed to fetch service reports");
     } finally {
       setLoading(false);
@@ -53,44 +61,56 @@ const [recentReportIds, setRecentReportIds] = useState<string[]>([]);
     fetchReports();
   }, []);
 
+  // ==========================
+  // Search + View Mode filter
+  // ==========================
+  const displayedReports = reports
+    .filter((report) => {
+      if (viewMode === "all") return true;
+      return recentReportIds.includes(report.id);
+    })
+    .filter((report) => {
+      if (!searchText.trim()) return true;
 
+      const text = searchText.toLowerCase();
+      return (
+        report.work_order_number?.toLowerCase().includes(text) ||
+        report.work_order_id.toLowerCase().includes(text) ||
+        report.work_order_title?.toLowerCase().includes(text) ||
+        `${report.submitter_first_name ?? ""} ${report.submitter_last_name ?? ""}`
+          .toLowerCase()
+          .includes(text)
+      );
+    });
 
-  const reportCount = reports.length;
-const displayedReports = reports
-  .filter((report) => {
-    // filter by applied filter
-    if (!appliedFilter || !appliedFilter.field) return true;
-    const rawValue = report[appliedFilter.field as keyof ServiceReportItem];
-    if (!rawValue) return false;
-    return rawValue.toString().toLowerCase().includes(appliedFilter.value.toLowerCase());
-  })
-  .filter((report) => {
-    // filter by view mode
-    if (viewMode === 'all') return true;
-    return recentReportIds.includes(report.id);
-  });
-
-
+  // ==========================
+  // UI
+  // ==========================
   return (
     <View style={{ flex: 1, backgroundColor: "#FFF" }}>
       <Header />
 
+      {/* 🔍 DIRECT SEARCH */}
       <HeaderSection
-        title="What services do you need?"
+        title="Service Reports"
         buttonText="+ New Reports"
-        onButtonClick={() => navigation.navigate("ServiceReportForm", { mode: "create" })}
-        onSearchPress={() => setFilterVisible(true)} // open filter modal
+        onButtonClick={() =>
+          navigation.navigate("ServiceReportForm", { mode: "create" })
+        }
+        searchValue={searchText}
+        onSearchChange={setSearchText}
       />
 
+      {/* Header Row */}
       <View style={styles.headerRow}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTag}>FSM</Text>
+        <View>
+          <Text style={styles.subTitle}>FSM</Text>
           <Text style={styles.title}>Service Reports</Text>
-          <Text style={styles.subtitle}>Field Service Documentation</Text>
-          <Text style={styles.metaText}>
-            {reportCount} {reportCount === 1 ? "report" : "reports"} - Updated just now
+          <Text style={styles.subtitle}>
+            {displayedReports.length} report(s) • Updated just now
           </Text>
         </View>
+
         <View style={{ position: 'relative' }}>
           <TouchableOpacity
             style={styles.filterBtn}
@@ -128,9 +148,10 @@ const displayedReports = reports
 
         </View>
       </View>
+
+      {/* Table */}
       <ScrollView style={styles.container}>
         <View style={styles.tableWrapper}>
-          {/* Table Header */}
           <View style={styles.row}>
             <Text style={[styles.cell, styles.headerText]}>Work Order</Text>
             <Text style={[styles.cell, styles.headerText]}>Submitted By</Text>
@@ -138,42 +159,48 @@ const displayedReports = reports
             <Text style={[styles.cell, styles.headerText]}>Has File</Text>
           </View>
 
-          {/* Table Rows */}
-          {displayedReports.map((item: ServiceReportItem, index: number) => (
-
+          {displayedReports.map((item) => (
             <TouchableOpacity
-              key={index}
+              key={item.id}
               style={styles.row}
               onPress={() => {
-  navigation.navigate("ServiceReportForm", {
-    mode: "view",
-    report: item,
-  });
+                navigation.navigate("ServiceReportForm", {
+                  mode: "view",
+                  report: item,
+                });
 
-  // Update recent reports
-  setRecentReportIds((prev) => {
-    const newList = [item.id, ...prev.filter(id => id !== item.id)];
-    return newList.slice(0, 10); // keep last 10
-  });
-}}
-
+                setRecentReportIds((prev) => {
+                  const updated = [item.id, ...prev.filter((id) => id !== item.id)];
+                  return updated.slice(0, 10);
+                });
+              }}
             >
               <View style={styles.cell}>
-                <Text style={styles.boldText}>{item.work_order_number || item.work_order_id}</Text>
+                <Text style={styles.boldText}>
+                  {item.work_order_number || item.work_order_id}
+                </Text>
                 <Text style={styles.subText}>{item.work_order_title}</Text>
               </View>
+
               <Text style={[styles.cell, styles.boldText]}>
                 {item.submitter_first_name} {item.submitter_last_name}
               </Text>
-              <Text style={styles.cell}>{new Date(item.submitted_at).toLocaleString()}</Text>
+
+              <Text style={styles.cell}>
+                {new Date(item.submitted_at).toLocaleString()}
+              </Text>
+
               <View style={[styles.cell, styles.center]}>
                 <View
                   style={[
                     styles.badge,
                     {
-                      backgroundColor: item.report_file_url ? "#E8F4FF" : "#FDECEC",
-                      borderColor: item.report_file_url ? "#009587" : "#FF3B30",
-                      borderWidth: 1.2,
+                      backgroundColor: item.report_file_url
+                        ? "#E8F4FF"
+                        : "#FDECEC",
+                      borderColor: item.report_file_url
+                        ? "#009587"
+                        : "#FF3B30",
                     },
                   ]}
                 >
@@ -191,16 +218,6 @@ const displayedReports = reports
             </TouchableOpacity>
           ))}
         </View>
-        <FilterModal
-          visible={filterVisible}
-          module="service_contract" // or "work_orders" or any suitable module for service reports
-          onClose={() => setFilterVisible(false)}
-          onApply={(filter) => {
-            setAppliedFilter(filter);
-            setFilterVisible(false);
-          }}
-        />
-
       </ScrollView>
     </View>
   );
@@ -343,5 +360,12 @@ const styles = StyleSheet.create({
     color: "#212121",
     fontSize: 13,
     fontWeight: "500",
+  },
+    subTitle: {
+    color: "#6234E2",
+    fontSize: 12,
+    fontWeight: "600",
+    marginBottom: 4,
+
   },
 });

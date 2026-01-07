@@ -8,11 +8,9 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 import { Vehicle } from "@/types/Worker";
 import { vehicleService } from "@/src/api/auth";
-import FilterModal, { AppliedFilter } from "@/components/common/FilterModal";
+
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-
 
 
 
@@ -21,8 +19,7 @@ export default function Vehicles() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState("");
-  const [filterVisible, setFilterVisible] = useState(false);
-  const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(null);
+ 
   type ViewMode = 'all' | 'recent';
 
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
@@ -55,8 +52,7 @@ useEffect(() => {
   }, []);
 
   //  Filter by search
-const filteredVehicles = vehicles.filter((v: any) => {
-  // 🔍 Search
+const filteredVehicles = vehicles.filter((v: Vehicle) => {
   const matchesSearch =
     v.plate_number.toLowerCase().includes(searchText.toLowerCase()) ||
     v.model.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -64,28 +60,16 @@ const filteredVehicles = vehicles.filter((v: any) => {
 
   if (!matchesSearch) return false;
 
-  // 🕒 Recently Viewed
-  if (viewMode === 'recent') {
-    if (!recentIds.includes(v.id)) return false;
+  if (viewMode === "recent") {
+    return recentIds.includes(v.id);
   }
 
-  // 🎯 Advanced filter
-  if (!appliedFilter) return true;
-
-  const value = v[appliedFilter.field];
-  if (!value) return false;
-
-  return value
-    .toString()
-    .toLowerCase()
-    .includes(appliedFilter.value.toLowerCase());
+  return true;
 });
 
 
-  const handleApplyFilter = (filter: AppliedFilter) => {
-    setAppliedFilter(filter);
-    setFilterVisible(false);
-  };
+
+
 const handleVehiclePress = async (vehicle: Vehicle) => {
   try {
     const key = 'recent_vehicles';
@@ -111,13 +95,14 @@ const handleVehiclePress = async (vehicle: Vehicle) => {
     <View style={{ flex: 1, backgroundColor: "#FFF" }}>
       <Header />
 
-      <HeaderSection
-        title="What services do you need?"
-        buttonText="+ New Vehicle"
-        onButtonClick={() => navigation.navigate("VehicleForm", { mode: "create" })}
-        onSearchPress={() => setFilterVisible(true)}
+    <HeaderSection
+  title="What services do you need?"
+  buttonText="+ New Vehicle"
+  onButtonClick={() => navigation.navigate("VehicleForm", { mode: "create" })}
+  searchValue={searchText}
+  onSearchChange={setSearchText}
+/>
 
-      />
       <View style={styles.headerRow}>
         <View style={styles.sectionHeader}>
           <Text style={styles.subTitle}>FSM</Text>
@@ -219,12 +204,7 @@ const handleVehiclePress = async (vehicle: Vehicle) => {
               </TouchableOpacity>
             ))
           )}
-          <FilterModal
-            visible={filterVisible}
-            module="vehicle"   // 🚗 IMPORTANT
-            onClose={() => setFilterVisible(false)}
-            onApply={handleApplyFilter}
-          />
+          
 
         </ScrollView>
       )}

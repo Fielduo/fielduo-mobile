@@ -9,7 +9,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 import { api } from "@/src/api/cilent";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import FilterModal, { AppliedFilter } from "@/components/common/FilterModal";
+
 
 
 type ContactNavigationProp = NativeStackNavigationProp<
@@ -42,11 +42,10 @@ const Contact = () => {
     const baseURL = api.getBaseUrl();
     const [contacts, setContacts] = useState<ContactItem[]>([]);
     const [filteredContacts, setFilteredContacts] = useState<ContactItem[]>([]);
-    const [appliedFilter, setAppliedFilter] = useState<AppliedFilter | null>(null);
-    const [filterOpen, setFilterOpen] = useState(false);
     const [viewMode, setViewMode] = useState<'all' | 'recent'>('all');
     const [recentContacts, setRecentContacts] = useState<ContactItem[]>([]);
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [searchText, setSearchText] = useState("");
 
 
 
@@ -76,47 +75,26 @@ const Contact = () => {
 
         });
     };
+
     useEffect(() => {
-        if (!appliedFilter) {
+        if (!searchText.trim()) {
             setFilteredContacts(contacts);
             return;
         }
 
-        const { field, operator, value } = appliedFilter;
+        const text = searchText.toLowerCase();
 
-        const result = contacts.filter((item: any) => {
-            const itemValue = item[field];
-
-            if (!itemValue) return false;
-
-            // TEXT
-            if (operator === 'contains') {
-                return itemValue
-                    .toString()
-                    .toLowerCase()
-                    .includes(value.toLowerCase());
-            }
-
-            if (operator === '=') {
-                return itemValue
-                    .toString()
-                    .toLowerCase() === value.toLowerCase();
-            }
-
-            // NUMBER / DATE
-            if (operator === '>') {
-                return itemValue > value;
-            }
-
-            if (operator === '<') {
-                return itemValue < value;
-            }
-
-            return true;
-        });
+        const result = contacts.filter((item) =>
+            Object.values(item).some((value) =>
+                value
+                    ? value.toString().toLowerCase().includes(text)
+                    : false
+            )
+        );
 
         setFilteredContacts(result);
-    }, [appliedFilter, contacts]);
+    }, [searchText, contacts]);
+
 
     const displayContacts =
         viewMode === 'recent' ? recentContacts : filteredContacts;
@@ -130,8 +108,10 @@ const Contact = () => {
                 onButtonClick={() =>
                     navigation.navigate("ContactForm", { mode: "create" })
                 }
-                onSearchPress={() => setFilterOpen(true)} // ✅ SEARCH CLICK
+                searchValue={searchText}
+                onSearchChange={setSearchText}
             />
+
 
             <ScrollView style={styles.container}>
                 <View style={styles.pageHeader}>
@@ -287,12 +267,7 @@ const Contact = () => {
                         </View>
                     </View>
                 ))}
-                <FilterModal
-  visible={filterOpen}
-  module="contacts"
-  onClose={() => setFilterOpen(false)}
-  onApply={setAppliedFilter}
-/>
+
 
 
             </ScrollView>
@@ -335,20 +310,20 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
 
-filterBtn: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
+    filterBtn: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
 
-  height: 36,          // 🔒 fixed height
-  minWidth: 170,       // 🔒 same width always
-  paddingHorizontal: 12,
+        height: 36,          // 🔒 fixed height
+        minWidth: 170,       // 🔒 same width always
+        paddingHorizontal: 12,
 
-  borderWidth: 1,
-  borderColor: "#D1D5DB",
-  borderRadius: 5,
-  backgroundColor: "#fff",
-},
+        borderWidth: 1,
+        borderColor: "#D1D5DB",
+        borderRadius: 5,
+        backgroundColor: "#fff",
+    },
 
 
     filterText: {
