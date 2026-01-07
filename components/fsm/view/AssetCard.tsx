@@ -17,6 +17,8 @@ import { Asset } from "@/types/Worker";
 
 import { Ionicons } from "@expo/vector-icons";
 
+import SwipeCard from "@/components/common/SwipeCard";
+
 
 
 export default function AssetCard() {
@@ -90,6 +92,7 @@ export default function AssetCard() {
   };
 
 
+
   // 🔹 Create new asset
   const handleCreateNew = () => {
     navigation.navigate("CreateAsset", { mode: "create" });
@@ -97,8 +100,28 @@ export default function AssetCard() {
 
   // 🔹 Card UI
   const renderAssetCard = ({ item }: { item: Asset }) => (
-    <TouchableOpacity onPress={() => handleCardPress(item)}>
+    <SwipeCard
+      onEdit={() =>
+        navigation.navigate("CreateAsset", {
+          mode: "edit",
+          asset: item,
+        })
+      }
+      onView={() => {
+        setRecentAssets((prev) => {
+          const exists = prev.find((a) => a.id === item.id);
+          if (exists) return prev;
+          return [item, ...prev].slice(0, 5);
+        });
+
+        navigation.navigate("CreateAsset", {
+          mode: "view",
+          asset: item,
+        });
+      }}
+    >
       <View style={styles.card}>
+
         <View style={styles.row}>
           <View style={styles.col}>
             <Text style={styles.label}>Asset Name</Text>
@@ -129,8 +152,10 @@ export default function AssetCard() {
           </View>
         </View>
       </View>
-    </TouchableOpacity>
+    </SwipeCard>
+
   );
+
 
   const displayAssets =
     viewMode === 'all' ? filteredAssets : recentAssets;
@@ -323,4 +348,25 @@ const styles = StyleSheet.create({
     color: "#374151",
     fontSize: 13,
   },
+  leftAction: {
+    backgroundColor: "#1C95F9",
+    justifyContent: "center",
+    alignItems: "center",
+    width: 90,
+  },
+
+  rightAction: {
+    backgroundColor: "#6C35D1",
+    justifyContent: "center",
+    alignItems: "center",
+    width: 90,
+  },
+
+  actionText: {
+    color: "#fff",
+    fontSize: 12,
+    marginTop: 4,
+    fontWeight: "600",
+  },
+
 });

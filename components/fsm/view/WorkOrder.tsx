@@ -15,6 +15,7 @@ import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/Search
 import { api } from "@/src/api/cilent";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import SwipeCard from "@/components/common/SwipeCard";
 
 type WorkOrder = {
   id: string;
@@ -89,45 +90,66 @@ export default function WorkOrderScreen() {
   };
 
   // Render each card
-  const renderWorkOrderCard = ({ item }: { item: WorkOrder }) => (
-    <TouchableOpacity onPress={() => handleCardPress(item)}>
-      <View style={styles.card}>
-        <View style={styles.row}>
-          <View style={styles.col}>
-            <Text style={styles.label}>Work Order</Text>
-            <Text style={styles.value}>{item.work_order_number}</Text>
-          </View>
-          <View style={styles.col}>
-            <Text style={styles.label}>Title</Text>
-            <Text style={styles.value}>{item.title}</Text>
-          </View>
-          <View style={styles.col}>
-            <Text style={styles.label}>Type</Text>
-            <Text style={styles.value}>{item.service_type}</Text>
-          </View>
-        </View>
+const renderWorkOrderCard = ({ item }: { item: WorkOrder }) => (
+  <SwipeCard
+    onEdit={() => {
+      navigation.navigate("CreateWorkorder", { mode: "edit", workorder: item });
+    }}
+    onView={() => {
+      // Track recently viewed
+      const updateRecent = async () => {
+        try {
+          let updated = recentIds.filter(id => id !== item.id);
+          updated.unshift(item.id);
+          updated = updated.slice(0, 10);
+          await AsyncStorage.setItem("recentWorkOrders", JSON.stringify(updated));
+          setRecentIds(updated);
+        } catch (err) {
+          console.error("Error saving recent work orders:", err);
+        }
+      };
+      updateRecent();
 
-        <View style={styles.row}>
-          <View style={styles.col}>
-            <Text style={styles.label}>Status</Text>
-            <Text style={styles.value}>{item.status_name}</Text>
-          </View>
-          <View style={styles.col}>
-            <Text style={styles.label}>Priority</Text>
-            <Text style={styles.value}>{item.priority_name}</Text>
-          </View>
-          <View style={styles.col}>
-            <Text style={styles.label}>Schedule</Text>
-            <Text style={styles.value}>
-              {item.scheduled_at
-                ? new Date(item.scheduled_at).toLocaleDateString("en-IN")
-                : ""}
-            </Text>
-          </View>
+      navigation.navigate("CreateWorkorder", { mode: "view", workorder: item });
+    }}
+  >
+    <View style={styles.card}>
+      <View style={styles.row}>
+        <View style={styles.col}>
+          <Text style={styles.label}>Work Order</Text>
+          <Text style={styles.value}>{item.work_order_number}</Text>
+        </View>
+        <View style={styles.col}>
+          <Text style={styles.label}>Title</Text>
+          <Text style={styles.value}>{item.title}</Text>
+        </View>
+        <View style={styles.col}>
+          <Text style={styles.label}>Type</Text>
+          <Text style={styles.value}>{item.service_type}</Text>
         </View>
       </View>
-    </TouchableOpacity>
-  );
+
+      <View style={styles.row}>
+        <View style={styles.col}>
+          <Text style={styles.label}>Status</Text>
+          <Text style={styles.value}>{item.status_name}</Text>
+        </View>
+        <View style={styles.col}>
+          <Text style={styles.label}>Priority</Text>
+          <Text style={styles.value}>{item.priority_name}</Text>
+        </View>
+        <View style={styles.col}>
+          <Text style={styles.label}>Schedule</Text>
+          <Text style={styles.value}>
+            {item.scheduled_at
+              ? new Date(item.scheduled_at).toLocaleDateString("en-IN")
+              : ""}
+          </Text>
+        </View>
+      </View>
+    </View>
+  </SwipeCard>
+);
 
   // Direct search filter
   const filteredWorkOrders = workOrders.filter((wo) => {

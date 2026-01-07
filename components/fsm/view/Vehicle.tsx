@@ -12,6 +12,8 @@ import { vehicleService } from "@/src/api/auth";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import { Swipeable } from 'react-native-gesture-handler';
+import SwipeCard from "@/components/common/SwipeCard";
 
 
 export default function Vehicles() {
@@ -29,6 +31,7 @@ const loadRecentVehicles = async () => {
   const stored = await AsyncStorage.getItem('recent_vehicles');
   setRecentIds(stored ? JSON.parse(stored) : []);
 };
+
 useEffect(() => {
   loadRecentVehicles();
 }, [viewMode]);
@@ -153,57 +156,77 @@ const handleVehiclePress = async (vehicle: Vehicle) => {
       ) : (
         <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
           {filteredVehicles.length === 0 ? (
-            <Text style={{ textAlign: "center", marginTop: 20 }}>No vehicles found.</Text>
-          ) : (
-            filteredVehicles.map((vehicle) => (
-              <TouchableOpacity
-                key={vehicle.id}
-                style={styles.card}
-               onPress={() => handleVehiclePress(vehicle)}
-              >
-                <View style={styles.row}>
-                  <View style={styles.col}>
-                    <Text style={styles.label}>Plate Number</Text>
-                    <Text style={styles.value}>{vehicle.plate_number}</Text>
-                  </View>
-                  <View style={styles.col}>
-                    <Text style={styles.label}>GPS Device</Text>
-                    <Text style={styles.value}>{vehicle.gps_device_id || "-"}</Text>
-                  </View>
-                </View>
+  <Text style={{ textAlign: "center", marginTop: 20 }}>
+    No vehicles found.
+  </Text>
+) : (
+  filteredVehicles.map((vehicle) => (
+    <SwipeCard
+      key={vehicle.id}
+      onEdit={() =>
+        navigation.navigate("VehicleForm", {
+          mode: "edit",
+          vehicle,
+        })
+      }
+      onView={() =>
+        navigation.navigate("VehicleForm", {
+          mode: "view",
+          vehicle,
+        })
+      }
+    >
+      <View style={styles.card}>
+        <View style={styles.row}>
+          <View style={styles.col}>
+            <Text style={styles.label}>Plate Number</Text>
+            <Text style={styles.value}>
+              {vehicle.plate_number}
+            </Text>
+          </View>
 
-                <View style={styles.row}>
-                  <View style={styles.col}>
-                    <Text style={styles.label}>Model</Text>
-                    <Text style={styles.value}>{vehicle.model}</Text>
-                  </View>
+          <View style={styles.col}>
+            <Text style={styles.label}>GPS Device</Text>
+            <Text style={styles.value}>
+              {vehicle.gps_device_id || "-"}
+            </Text>
+          </View>
+        </View>
 
-                  <View style={styles.col}>
-                    <Text style={styles.label}>Status</Text>
-                    <View
-                      style={[
-                        styles.statusBadge,
-                        vehicle.status.toLowerCase() === "active"
-                          ? styles.active
-                          : styles.inactive,
-                      ]}
-                    >
-                      <Text style={styles.statusText}>{vehicle.status}</Text>
-                    </View>
-                  </View>
+        <View style={styles.row}>
+          <View style={styles.col}>
+            <Text style={styles.label}>Model</Text>
+            <Text style={styles.value}>{vehicle.model}</Text>
+          </View>
 
+          <View style={styles.col}>
+            <Text style={styles.label}>Status</Text>
+            <View
+              style={[
+                styles.statusBadge,
+                vehicle.status.toLowerCase() === "active"
+                  ? styles.active
+                  : styles.inactive,
+              ]}
+            >
+              <Text style={styles.statusText}>
+                {vehicle.status}
+              </Text>
+            </View>
+          </View>
+        </View>
 
-                </View>
+        <View style={styles.row}>
+          <View style={styles.col}>
+            <Text style={styles.label}>Type</Text>
+            <Text style={styles.value}>{vehicle.type}</Text>
+          </View>
+        </View>
+      </View>
+    </SwipeCard>
+  ))
+)}
 
-                <View style={styles.row}>
-                  <View style={styles.col}>
-                    <Text style={styles.label}>Type</Text>
-                    <Text style={styles.value}>{vehicle.type}</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))
-          )}
           
 
         </ScrollView>

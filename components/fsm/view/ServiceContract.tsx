@@ -14,6 +14,7 @@ import { api } from "@/src/api/cilent";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import SwipeCard from "@/components/common/SwipeCard";
 
 type ViewMode = "all" | "recent";
 
@@ -134,59 +135,76 @@ export default function ServiceContract() {
   // ================================
   // Render card
   // ================================
- const renderContractCard = ({ item }: { item: UIContract }) => (
-    <TouchableOpacity onPress={() => handleCardPress(item)}>
-      <View style={styles.card}>
-        <View style={styles.row}>
-          <View style={styles.column}>
-            <Text style={styles.label}>Contract Number</Text>
-            <Text style={styles.value}>{item.contractNumber}</Text>
-          </View>
-
-          <View style={styles.dividerVertical} />
-
-          <View style={styles.column}>
-            <Text style={styles.label}>Contract Name</Text>
-            <Text style={styles.value}>{item.contractName}</Text>
-          </View>
+const renderContractCard = ({ item }: { item: UIContract }) => (
+  <SwipeCard
+    onEdit={() =>
+      navigation.navigate("CreateServiceContract", {
+        mode: "edit",
+         servicecontract: item.raw,
+      })
+    }
+    onView={() =>
+      navigation.navigate("CreateServiceContract", {
+        mode: "view",
+        servicecontract: item.raw,
+      })
+    }
+  >
+    <View style={styles.card}>
+      {/* ROW 1 */}
+      <View style={styles.row}>
+        <View style={styles.column}>
+          <Text style={styles.label}>Contract Number</Text>
+          <Text style={styles.value}>{item.contractNumber}</Text>
         </View>
 
-        <View style={styles.dividerHorizontal} />
+        <View style={styles.dividerVertical} />
 
-        <View style={styles.row}>
-          <View style={styles.column}>
-            <Text style={styles.label}>Account</Text>
-            <Text style={styles.value}>{item.account}</Text>
-          </View>
+        <View style={styles.column}>
+          <Text style={styles.label}>Contract Name</Text>
+          <Text style={styles.value}>{item.contractName}</Text>
+        </View>
+      </View>
 
-          <View style={styles.dividerVertical} />
+      <View style={styles.dividerHorizontal} />
 
-          <View style={styles.column}>
-            <Text style={styles.label}>Grand Total</Text>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{item.grandTotal}</Text>
-            </View>
-          </View>
+      {/* ROW 2 */}
+      <View style={styles.row}>
+        <View style={styles.column}>
+          <Text style={styles.label}>Account</Text>
+          <Text style={styles.value}>{item.account}</Text>
         </View>
 
-        <View style={styles.dividerHorizontal} />
+        <View style={styles.dividerVertical} />
 
-        <View style={styles.row}>
-          <View style={styles.column}>
-            <Text style={styles.label}>Start Date</Text>
-            <Text style={styles.value}>{formatDate(item.startDate)}</Text>
-          </View>
-
-          <View style={styles.dividerVertical} />
-
-          <View style={styles.column}>
-            <Text style={styles.label}>End Date</Text>
-            <Text style={styles.value}>{formatDate(item.endDate)}</Text>
+        <View style={styles.column}>
+          <Text style={styles.label}>Grand Total</Text>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{item.grandTotal}</Text>
           </View>
         </View>
       </View>
-    </TouchableOpacity>
-  );
+
+      <View style={styles.dividerHorizontal} />
+
+      {/* ROW 3 */}
+      <View style={styles.row}>
+        <View style={styles.column}>
+          <Text style={styles.label}>Start Date</Text>
+          <Text style={styles.value}>{formatDate(item.startDate)}</Text>
+        </View>
+
+        <View style={styles.dividerVertical} />
+
+        <View style={styles.column}>
+          <Text style={styles.label}>End Date</Text>
+          <Text style={styles.value}>{formatDate(item.endDate)}</Text>
+        </View>
+      </View>
+    </View>
+  </SwipeCard>
+);
+
 
   return (
     <View style={{ flex: 1, backgroundColor: "#FFF" }}>

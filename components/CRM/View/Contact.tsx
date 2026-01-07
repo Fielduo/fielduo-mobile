@@ -9,6 +9,8 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 import { api } from "@/src/api/cilent";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Swipeable } from "react-native-gesture-handler";
+import SwipeCard from "@/components/common/SwipeCard";
 
 
 
@@ -46,6 +48,7 @@ const Contact = () => {
     const [recentContacts, setRecentContacts] = useState<ContactItem[]>([]);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [searchText, setSearchText] = useState("");
+
 
 
 
@@ -164,9 +167,33 @@ const Contact = () => {
 
                 {/* ---------- SCROLL LIST ---------- */}
 
-                {displayContacts.map((item, index) => (
+{displayContacts.map((item) => (
+  <SwipeCard
+    key={item.id}
+    onEdit={() =>
+      navigation.navigate("ContactForm", {
+        mode: "edit",
+        data: item,
+      })
+    }
+    onView={() => {
+      // 🔥 add to recent viewed
+      setRecentContacts((prev) => {
+        const exists = prev.find((c) => c.id === item.id);
+        if (exists) return prev;
+        return [item, ...prev].slice(0, 10);
+      });
 
-                    <View key={index} style={styles.card}>
+      navigation.navigate("ContactForm", {
+        mode: "view",
+        data: item,
+      });
+    }}
+  >
+    <View style={styles.card}>
+      {/* 🔽 your existing contact card UI */}
+
+
                         <View style={styles.topRow}>
 
                             <Image
@@ -265,8 +292,12 @@ const Contact = () => {
 
                             </View>
                         </View>
-                    </View>
-                ))}
+      </View>
+  </SwipeCard>
+))}
+
+
+
 
 
 

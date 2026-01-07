@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import Header from "../../common/Header";
 import HeaderSection from "../../common/HeaderSection";
+import SwipeCard from "@/components/common/SwipeCard";
 
 // --- Types ---
 export interface Payment {
@@ -137,8 +138,24 @@ const Payments: React.FC = () => {
   }, [payments, searchText, viewMode, recentViewedIds]);
 
   // --- Render card ---
-  const renderPaymentCard = ({ item }: { item: Payment }) => (
-    <TouchableOpacity onPress={() => handlePaymentCardPress(item)}>
+  const renderPaymentCard = ({ item }: { item: Payment }) => {
+  return (
+    <SwipeCard
+      onEdit={() => {
+        // Navigate to edit mode
+        navigation.navigate("CreatePayment", { mode: "edit", payment: item });
+      }}
+      onView={() => {
+        // Track recently viewed
+        setRecentViewedIds((prev) => {
+          const updated = [item.id, ...prev.filter((id) => id !== item.id)];
+          return updated.slice(0, 10); // keep last 10
+        });
+
+        // Navigate to view
+        navigation.navigate("CreatePayment", { mode: "view", payment: item });
+      }}
+    >
       <View style={styles.card}>
         {/* Row 1 */}
         <View style={styles.row}>
@@ -188,8 +205,9 @@ const Payments: React.FC = () => {
           </View>
         </View>
       </View>
-    </TouchableOpacity>
+    </SwipeCard>
   );
+};
 
   return (
     <View style={{ flex: 1, backgroundColor: "#FFF" }}>

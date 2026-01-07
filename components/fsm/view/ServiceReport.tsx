@@ -14,6 +14,7 @@ import Header from "../../common/Header";
 import { api } from "@/src/api/cilent";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 import { Ionicons } from "@expo/vector-icons";
+import SwipeCard from "@/components/common/SwipeCard";
 
 type NavigationProp = NativeStackNavigationProp<SearchMenuStackParamList>;
 type ViewMode = "all" | "recent";
@@ -159,64 +160,84 @@ export default function ServiceReport() {
             <Text style={[styles.cell, styles.headerText]}>Has File</Text>
           </View>
 
-          {displayedReports.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={styles.row}
-              onPress={() => {
-                navigation.navigate("ServiceReportForm", {
-                  mode: "view",
-                  report: item,
-                });
+         {displayedReports.map((item) => (
+  <SwipeCard
+    key={item.id}
+    onEdit={() =>
+      navigation.navigate("ServiceReportForm", {
+        mode: "edit",
+        report: item,
+      })
+    }
+    onView={() => {
+      // 🔥 add to recent viewed
+      setRecentReportIds((prev) => {
+        const updated = [
+          item.id,
+          ...prev.filter((id) => id !== item.id),
+        ];
+        return updated.slice(0, 10);
+      });
 
-                setRecentReportIds((prev) => {
-                  const updated = [item.id, ...prev.filter((id) => id !== item.id)];
-                  return updated.slice(0, 10);
-                });
-              }}
-            >
-              <View style={styles.cell}>
-                <Text style={styles.boldText}>
-                  {item.work_order_number || item.work_order_id}
-                </Text>
-                <Text style={styles.subText}>{item.work_order_title}</Text>
-              </View>
+      navigation.navigate("ServiceReportForm", {
+        mode: "view",
+        report: item,
+      });
+    }}
+  >
+    <View style={styles.row}>
+      {/* Work Order */}
+      <View style={styles.cell}>
+        <Text style={styles.boldText}>
+          {item.work_order_number || item.work_order_id}
+        </Text>
+        <Text style={styles.subText}>
+          {item.work_order_title}
+        </Text>
+      </View>
 
-              <Text style={[styles.cell, styles.boldText]}>
-                {item.submitter_first_name} {item.submitter_last_name}
-              </Text>
+      {/* Submitted By */}
+      <Text style={[styles.cell, styles.boldText]}>
+        {item.submitter_first_name} {item.submitter_last_name}
+      </Text>
 
-              <Text style={styles.cell}>
-                {new Date(item.submitted_at).toLocaleString()}
-              </Text>
+      {/* Submitted At */}
+      <Text style={styles.cell}>
+        {new Date(item.submitted_at).toLocaleString()}
+      </Text>
 
-              <View style={[styles.cell, styles.center]}>
-                <View
-                  style={[
-                    styles.badge,
-                    {
-                      backgroundColor: item.report_file_url
-                        ? "#E8F4FF"
-                        : "#FDECEC",
-                      borderColor: item.report_file_url
-                        ? "#009587"
-                        : "#FF3B30",
-                    },
-                  ]}
-                >
-                  <Text
-                    style={{
-                      color: item.report_file_url ? "#009587" : "#FF3B30",
-                      fontWeight: "600",
-                      fontSize: 12,
-                    }}
-                  >
-                    {item.report_file_url ? "Yes" : "No"}
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
+      {/* Has File */}
+      <View style={[styles.cell, styles.center]}>
+        <View
+          style={[
+            styles.badge,
+            {
+              backgroundColor: item.report_file_url
+                ? "#E8F4FF"
+                : "#FDECEC",
+              borderColor: item.report_file_url
+                ? "#009587"
+                : "#FF3B30",
+            },
+          ]}
+        >
+          <Text
+            style={{
+              color: item.report_file_url
+                ? "#009587"
+                : "#FF3B30",
+              fontWeight: "600",
+              fontSize: 12,
+            }}
+          >
+            {item.report_file_url ? "Yes" : "No"}
+          </Text>
+        </View>
+      </View>
+    </View>
+  </SwipeCard>
+))}
+
         </View>
       </ScrollView>
     </View>

@@ -13,6 +13,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 import { workCompletionService } from "@/src/api/auth";
+import SwipeCard from "@/components/common/SwipeCard";
 
 
 
@@ -97,72 +98,91 @@ export default function WorkCompletion() {
         </Text>
 
         {filteredWorkData.length === 0 ? (
-          <Text style={styles.noDataText}>No work completion records found.</Text>
+          <Text style={styles.noDataText}>
+            No work completion records found.
+          </Text>
         ) : (
           filteredWorkData.map((item, index) => {
             const colors = getStatusColor(item.status || "Unknown");
+
             return (
-              <TouchableOpacity
-                key={index}
-                style={styles.card}
-                activeOpacity={0.8}
-                onPress={() =>
+              <SwipeCard
+                key={item.id ?? index}
+                onEdit={() =>
+                  navigation.navigate("WorkCompletionForm", {
+                    mode: "edit",
+                    workCompletion: item,
+                  })
+                }
+                onView={() =>
                   navigation.navigate("WorkCompletionForm", {
                     mode: "view",
                     workCompletion: item,
                   })
                 }
               >
-                <View style={styles.row}>
-                  <View style={styles.column}>
-                    <Text style={styles.label}>Work Order</Text>
-                    <Text style={styles.value}>
-                      WO-{item.work_order_id ? item.work_order_id.slice(0, 8) : "—"}{" "}
-                      <Text style={styles.smallText}>
-                        ({item.work_order_title || "—"})
+                <View style={styles.card}>
+                  {/* Row 1 */}
+                  <View style={styles.row}>
+                    <View style={styles.column}>
+                      <Text style={styles.label}>Work Order</Text>
+                      <Text style={styles.value}>
+                        WO-
+                        {item.work_order_id
+                          ? item.work_order_id.slice(0, 8)
+                          : "—"}{" "}
+                        <Text style={styles.smallText}>
+                          ({item.work_order_title || "—"})
+                        </Text>
                       </Text>
-                    </Text>
+                    </View>
 
-                  </View>
-                  <View style={styles.column}>
-                    <Text style={styles.label}>Verified By</Text>
-                    <Text style={styles.value}>
-                      {item.verifier_first_name
-                        ? `${item.verifier_first_name} ${item.verifier_last_name || ""}`
-                        : "—"}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.row}>
-                  <View style={styles.column}>
-                    <Text style={styles.label}>Status</Text>
-                    <View
-                      style={[
-                        styles.statusBadge,
-                        { backgroundColor: colors.backgroundColor },
-                      ]}
-                    >
-                      <Text
-                        style={[styles.statusText, { color: colors.color }]}
-                      >
-                        {item.status || "N/A"}
+                    <View style={styles.column}>
+                      <Text style={styles.label}>Verified By</Text>
+                      <Text style={styles.value}>
+                        {item.verifier_first_name
+                          ? `${item.verifier_first_name} ${item.verifier_last_name || ""}`
+                          : "—"}
                       </Text>
                     </View>
                   </View>
-                  <View style={styles.column}>
-                    <Text style={styles.label}>Verified At</Text>
-                    <Text style={styles.value}>
-                      {item.verified_at
-                        ? new Date(item.verified_at).toLocaleString()
-                        : "—"}
-                    </Text>
+
+                  {/* Row 2 */}
+                  <View style={styles.row}>
+                    <View style={styles.column}>
+                      <Text style={styles.label}>Status</Text>
+                      <View
+                        style={[
+                          styles.statusBadge,
+                          { backgroundColor: colors.backgroundColor },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.statusText,
+                            { color: colors.color },
+                          ]}
+                        >
+                          {item.status || "N/A"}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.column}>
+                      <Text style={styles.label}>Verified At</Text>
+                      <Text style={styles.value}>
+                        {item.verified_at
+                          ? new Date(item.verified_at).toLocaleString()
+                          : "—"}
+                      </Text>
+                    </View>
                   </View>
                 </View>
-              </TouchableOpacity>
+              </SwipeCard>
             );
           })
         )}
+
 
 
       </ScrollView>
@@ -219,10 +239,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
     marginBottom: 12,
+    // ✅ Full border
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+
+    // Shadow (iOS)
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
+
+    // Shadow (Android)
     elevation: 2,
   },
   row: {

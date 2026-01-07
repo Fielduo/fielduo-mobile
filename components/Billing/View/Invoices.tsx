@@ -15,6 +15,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 import { api } from "@/src/api/cilent";
 import { Ionicons } from "@expo/vector-icons";
+import SwipeCard from "@/components/common/SwipeCard";
 
 // --- Types ---
 export interface Invoice {
@@ -109,8 +110,22 @@ const Invoices: React.FC = () => {
     });
   }, [invoices, searchText, viewMode, recentlyViewedIds]);
 
-  const renderInvoiceCard = ({ item }: { item: Invoice }) => (
-    <TouchableOpacity onPress={() => handleInvoiceCardPress(item)}>
+const renderInvoiceCard = ({ item }: { item: Invoice }) => {
+  return (
+    <SwipeCard
+      onEdit={() => {
+        navigation.navigate("InvoicesForm", { mode: "edit", data: item });
+      }}
+      onView={() => {
+        // Track recently viewed
+        setRecentlyViewedIds((prev) => {
+          const updated = [item.id, ...prev.filter((id) => id !== item.id)];
+          return updated.slice(0, 20);
+        });
+
+        navigation.navigate("InvoicesForm", { mode: "view", data: item });
+      }}
+    >
       <View style={styles.card}>
         {/* Row 1 */}
         <View style={styles.row}>
@@ -150,8 +165,10 @@ const Invoices: React.FC = () => {
           </View>
         </View>
       </View>
-    </TouchableOpacity>
+    </SwipeCard>
   );
+};
+
 
   return (
     <View style={{ flex: 1, backgroundColor: "#FFF" }}>

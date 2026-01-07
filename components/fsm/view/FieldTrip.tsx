@@ -15,6 +15,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SearchMenuStackParamList } from "@/src/navigation/StackNavigator/SearchmenuNavigator";
 import { getTrips } from "@/src/api/auth";
 import { Ionicons } from "@expo/vector-icons";
+import SwipeCard from "@/components/common/SwipeCard";
 
 interface FieldWorkerTrip {
   id: string;
@@ -116,9 +117,28 @@ export default function FieldWorkerTrip() {
   };
 
   /* ---------------- CARD UI ---------------- */
-  const renderTripCard = ({ item }: { item: FieldWorkerTrip }) => (
-    <TouchableOpacity onPress={() => handleCardPress(item)}>
-      <View style={styles.card}>
+ const renderTripCard = ({ item }: { item: FieldWorkerTrip }) => (
+  <SwipeCard
+    onEdit={() =>
+      navigation.navigate("CreateFieldWorkerTrip", {
+        mode: "edit",
+        trip: item,
+      })
+    }
+    onView={() => {
+      // 🔥 add to recent viewed
+      setRecentTripIds((prev) => {
+        const updated = [item.id, ...prev.filter((id) => id !== item.id)];
+        return updated.slice(0, 20);
+      });
+
+      navigation.navigate("CreateFieldWorkerTrip", {
+        mode: "view",
+        trip: item,
+      });
+    }}
+  >
+    <View style={styles.card}>
         <View style={styles.content}>
           <View style={styles.row}>
             <View style={styles.columnLeft}>
@@ -150,7 +170,7 @@ export default function FieldWorkerTrip() {
           </View>
         </View>
       </View>
-    </TouchableOpacity>
+     </SwipeCard>
   );
 
   /* ---------------- UI ---------------- */
