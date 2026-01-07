@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet, TextInput } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 
 interface HeaderSectionProps {
   title: string;
@@ -32,13 +33,23 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
         </TouchableOpacity>
       </View>
 
-      {/* ✅ DIRECT SEARCH */}
-      <TextInput
-        placeholder="Search..."
-        value={searchValue}
-        onChangeText={onSearchChange}
-        style={styles.input}
-      />
+      {/* ✅ DIRECT SEARCH WITH CLEAR BUTTON */}
+      <View style={styles.searchContainer}>
+        <TextInput
+          placeholder="Search..."
+          value={searchValue}
+          onChangeText={onSearchChange}
+          style={styles.input}
+        />
+        {searchValue.length > 0 && (
+          <TouchableOpacity
+            style={styles.clearBtn}
+            onPress={() => onSearchChange("")}
+          >
+            <Ionicons name="close-circle" size={20} color="#888" />
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 };
@@ -59,10 +70,20 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   buttonText: { color: "#fff", fontWeight: "600" },
+  searchContainer: {
+    position: "relative",
+  },
   input: {
     borderWidth: 1,
     borderColor: "#D1D5DB",
     borderRadius: 6,
     padding: 10,
+    paddingRight: 32, // space for clear button
+  },
+  clearBtn: {
+    position: "absolute",
+    right: 8,
+    top: "50%",
+    transform: [{ translateY: -10 }],
   },
 });
