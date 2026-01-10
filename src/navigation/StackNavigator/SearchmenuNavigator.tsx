@@ -23,7 +23,7 @@ import QuotesForm from "@/components/Billing/Form/QuotesForm";
 import CustomerFeedback from "@/components/Billing/View/CustomerFeedback";
 import CustomerFeedbackForm from "@/components/Billing/Form/CustomerFeedbackForm";
 import Invoices from "@/components/Billing/View/Invoices";
-import Payments from "@/components/Billing/View/Payments";
+import Payments, { Payment } from "@/components/Billing/View/Payments";
 import PaymentForm from "@/components/Billing/Form/PaymentForm";
 import Quotes from "@/components/Billing/View/Quotes";
 import ContactForm from "@/components/CRM/Form/ContactForm";
@@ -47,6 +47,7 @@ import WorkCompletion from "@/components/fsm/view/WorkCompletion";
 import WorkForce from "@/components/fsm/view/WorkForce";
 import WorkOrder from "@/components/fsm/view/WorkOrder";
 import { Inventory } from "@/types/Worker";
+import NotificationScreen from "@/components/report-analysis/NotificationScreen";
 
 // ✅ Define type for all routes in this navigator
 export type SearchMenuStackParamList = {
@@ -120,6 +121,7 @@ export type SearchMenuStackParamList = {
     mode: "create" | "view" | "edit";
     quote?: any;
   };
+  Notifications: undefined;
 };
 
 // ✅ Create a typed stack navigator
@@ -185,6 +187,8 @@ export default function SearchmenuNavigator() {
       <Stack.Screen name="CreatePayment" component={PaymentForm} />
       <Stack.Screen name="Quotes" component={Quotes} />
       <Stack.Screen name="QuotesForm" component={QuotesForm} />
+
+
     </Stack.Navigator>
   );
 }

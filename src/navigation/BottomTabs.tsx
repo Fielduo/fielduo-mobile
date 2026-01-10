@@ -1,12 +1,11 @@
-import React from 'react';
-import { Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import React from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import ProfileScreen from '../screens/Profile/ProfileScreen';
-import SearchmenuNavigator from './StackNavigator/SearchmenuNavigator';
 import SearchScreen from '../screens/Search/SearchScreen';
 import DashboardStackNavigator from './StackNavigator/DashboardNavigator';
+import SearchmenuNavigator from './StackNavigator/SearchmenuNavigator';
 
 const Tab = createBottomTabNavigator();
 
@@ -14,6 +13,7 @@ const BottomTabNavigator = () => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }} edges={['bottom']}>
       <Tab.Navigator
+        id="BottomTabNavigator"
         screenOptions={({ route }) => ({
           headerShown: false,
           tabBarIcon: ({ focused, color, size }) => {

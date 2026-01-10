@@ -59,7 +59,7 @@ const SearchScreen = () => {
   }, [query]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#fff" }}>
+    <View style={{ flex: 1, backgroundColor: "#fff",paddingRight:16 }}>
       <Header />
       <View style={styles.searchBox}>
         <TextInput

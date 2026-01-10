@@ -16,6 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Header from '../common/Header';
 
 const Profile = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -68,6 +69,7 @@ const Profile = () => {
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* HEADER */}
+     
       <LinearGradient colors={['#6C63FF', '#4A47A3']} style={styles.header}>
         <Text style={styles.headerTitle}>My Profile</Text>
       </LinearGradient>

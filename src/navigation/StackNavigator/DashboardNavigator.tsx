@@ -11,6 +11,7 @@ const Stack = createNativeStackNavigator();
 const DashboardStackNavigator = () => {
   return (
     <Stack.Navigator
+      id="DashboardStack"
       screenOptions={{ headerShown: false }}
       initialRouteName="DashboardScreen"   // 🔥 IMPORTANT
     >
@@ -38,6 +39,7 @@ const DashboardStackNavigator = () => {
         name="ServiceReportForm"
         component={ServiceReportForm}
       />
+      
     </Stack.Navigator>
   );
 };

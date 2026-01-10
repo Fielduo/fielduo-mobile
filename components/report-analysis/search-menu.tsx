@@ -103,7 +103,7 @@ export default function SearchMenu() {
   const navigation = useNavigation<SearchMenuNavigationProp>();
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#FFF" }}>
+    <View style={{ flex: 1, backgroundColor: "#FFF" ,paddingRight:16}}>
       <Header />
       <SafeAreaView style={styles.safeArea}>
         <ScrollView

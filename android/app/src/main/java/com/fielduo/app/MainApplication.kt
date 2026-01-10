@@ -1,4 +1,4 @@
-package com.santhiyak.fielduomobile
+package com.fielduo.app
 
 import android.app.Application
 import android.content.res.Configuration

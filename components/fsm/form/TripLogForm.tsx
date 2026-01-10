@@ -363,27 +363,43 @@ export default function TripLogForm() {
     const online = await isOnline();
 
     // ---------------- OFFLINE ----------------
+    // ---------------- OFFLINE ----------------
     if (!online) {
       console.log("📴 Offline Trip Search");
 
       const localTrips = await tripCollection.query().fetch();
+      const searchValue = text.toLowerCase();
 
       const filtered = localTrips
         .map((t: any) => JSON.parse(t.data))
-        .filter((t: any) =>
-          String(t.job_assignment_number)
-            ?.toLowerCase()
-            .includes(text.toLowerCase())
-        )
+        .filter((t: any) => {
+          return (
+            String(t.job_assignment_number ?? "")
+              .toLowerCase()
+              .includes(searchValue) ||
+
+            String(t.work_order_number ?? "")
+              .toLowerCase()
+              .includes(searchValue) ||
+
+            String(t.trip_id ?? t.id ?? "")
+              .toLowerCase()
+              .includes(searchValue)
+          );
+        })
         .map((t: any) => ({
           ...t,
-          name: t.job_assignment_number, // 👈 display
-          id: t.job_assignment_number,   // 👈 key
+          name:
+            t.job_assignment_number ||
+            t.work_order_number ||
+            t.trip_id,
+          id: t.trip_id || t.id,
         }));
 
       setTripResults(filtered);
       return;
     }
+
 
     // ---------------- ONLINE ----------------
     try {
@@ -952,7 +968,13 @@ export default function TripLogForm() {
   }, [text]);
 
 
+  const removeBeforeImage = () => {
+    setBeforeImage(null);
+  };
 
+  const removeAfterImage = () => {
+    setAfterImage(null);
+  };
 
 
   const headerTitle =
@@ -1124,28 +1146,26 @@ export default function TripLogForm() {
           )}
         </View>
 
-
-        {/* Linked Assignment */}
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>🔗 Linked Assignment</Text>
-
+          <Text style={styles.sectionTitle}> Linked Assignment</Text>
           <View style={styles.col}>
             <Text style={styles.label}>Work Order Number *</Text>
             {mode === "view" ? (
               <View style={styles.readOnlyView}>
+
                 <Text style={styles.readOnlyText}>
-                  {/* Find the selected work order object based on formData.work_order_number */}
                   {formData.work_order_number
                     ? (() => {
                       const selectedOrder = workOrders.find(
                         (o) => o.work_order_number === formData.work_order_number
                       );
                       return selectedOrder
-                        ? `${selectedOrder.work_order_number} `
+                        ? `${selectedOrder.work_order_number}`
                         : "-";
                     })()
                     : "-"}
                 </Text>
+
               </View>
             ) : (
               <View style={styles.pickerContainer}>
@@ -1160,7 +1180,7 @@ export default function TripLogForm() {
                     <Picker.Item
                       key={order.id}
                       label={`${order.work_order_number} - ${order.title}`}
-                      value={order.id}     // IMPORTANT — send ID!
+                      value={order.id}
                     />
                   ))}
                 </Picker>
@@ -1182,7 +1202,7 @@ export default function TripLogForm() {
             ) : (
               <TextInput
                 placeholder="Auto-populated from assignment"
-                editable={true} // editable in edit/create mode
+                editable={true}
                 value={formData.job_assignment_id}
                 style={styles.input}
               />
@@ -1239,7 +1259,6 @@ export default function TripLogForm() {
                   editable={true}
                 />
               )}
-
             </View>
             <View style={styles.col}>
               <Text style={styles.label}>GPS Coordinates</Text>
@@ -1252,7 +1271,8 @@ export default function TripLogForm() {
               ) : (
                 <TextInput placeholder="Auto-captured" value={formData.gps_coordinates} style={styles.input} editable={true} />
 
-              )}   </View>
+              )}
+            </View>
           </View>
 
           <Text style={styles.label}>Site Address</Text>
@@ -1342,7 +1362,8 @@ export default function TripLogForm() {
               ) : (
                 <TextInput placeholder="Auto-calculated" value={duration} style={styles.input} editable={true} />
 
-              )}   </View>
+              )}
+            </View>
           </View>
         </View>
 
@@ -1636,47 +1657,74 @@ export default function TripLogForm() {
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>  Documentation</Text>
 
+
           {/* BEFORE PHOTO */}
           <View style={styles.block}>
             <Text style={styles.blockTitle}>Before Photo</Text>
+
             {mode !== "view" && (
               <View style={styles.row}>
                 <TouchableOpacity style={styles.smallBtn} onPress={openCameraBefore}>
-                  <Text style={styles.smallBtnText}>📷 Camera</Text>
+                  <Ionicons name="camera-outline" size={18} color="#fff" />
+                  <Text style={styles.smallBtnText}> Camera</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.smallBtn} onPress={openGalleryBefore}>
-                  <Text style={styles.smallBtnText}>🖼 Gallery</Text>
+                  <Ionicons name="image-outline" size={18} color="#fff" />
+                  <Text style={styles.smallBtnText}> Gallery</Text>
                 </TouchableOpacity>
               </View>
             )}
+
             {beforeImage && (
-              <Image
-                source={{ uri: beforeImage }}
-                style={styles.previewImage}
-              />
+              <View style={styles.imageWrapper}>
+                <Image source={{ uri: beforeImage }} style={styles.previewImage} />
+
+                {mode !== "view" && (
+                  <TouchableOpacity
+                    style={styles.removeImageBtn}
+                    onPress={removeBeforeImage}
+                  >
+                    <Ionicons name="close-circle" size={24} color="#ef4444" />
+                  </TouchableOpacity>
+                )}
+              </View>
             )}
           </View>
 
+
+          {/* AFTER PHOTO */}
           {/* AFTER PHOTO */}
           <View style={styles.block}>
             <Text style={styles.blockTitle}>After Photo</Text>
+
             {mode !== "view" && (
               <View style={styles.row}>
                 <TouchableOpacity style={styles.smallBtn} onPress={openCameraAfter}>
-                  <Text style={styles.smallBtnText}>📷 Camera</Text>
+                  <Ionicons name="camera-outline" size={18} color="#fff" />
+                  <Text style={styles.smallBtnText}> Camera</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.smallBtn} onPress={openGalleryAfter}>
-                  <Text style={styles.smallBtnText}>🖼 Gallery</Text>
+                  <Ionicons name="image-outline" size={18} color="#fff" />
+                  <Text style={styles.smallBtnText}> Gallery</Text>
                 </TouchableOpacity>
               </View>
             )}
+
             {afterImage && (
-              <Image
-                source={{ uri: afterImage }}
-                style={styles.previewImage}
-              />
+              <View style={styles.imageWrapper}>
+                <Image source={{ uri: afterImage }} style={styles.previewImage} />
+
+                {mode !== "view" && (
+                  <TouchableOpacity
+                    style={styles.removeImageBtn}
+                    onPress={removeAfterImage}
+                  >
+                    <Ionicons name="close-circle" size={24} color="#ef4444" />
+                  </TouchableOpacity>
+                )}
+              </View>
             )}
           </View>
 
@@ -1689,24 +1737,46 @@ export default function TripLogForm() {
             {/* Upload button only in edit/create mode */}
             {mode !== "view" && (
               <TouchableOpacity style={styles.docBtn} onPress={openDocument}>
-                <Text style={styles.docBtnText}>📄 Upload Document</Text>
+                <MaterialIcons name="upload-file" size={18} color="#fff" />
+                <Text style={styles.docBtnText}> Upload Document</Text>
               </TouchableOpacity>
+
             )}
 
             {/* Show file name and download button */}
             {documentFiles.length > 0 && (
               <View style={{ marginTop: 6 }}>
                 {documentFiles.map((doc, index) => (
-                  <Text
+                  <View
                     key={index}
-                    style={{ color: "green", fontWeight: "600" }}
-                    numberOfLines={1}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: 6,
+                    }}
                   >
-                    📎 {doc.name}
-                  </Text>
+                    {/* Left: attachment icon + name */}
+                    <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+                      <Ionicons name="attach-outline" size={14} color="green" />
+                      <Text
+                        style={{
+                          color: "green",
+                          fontWeight: "600",
+                          marginLeft: 4,
+                          flexShrink: 1,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {doc.name}
+                      </Text>
+                    </View>
+
+                  </View>
                 ))}
               </View>
             )}
+
 
           </View>
 
@@ -1777,6 +1847,7 @@ export default function TripLogForm() {
             </TouchableOpacity>
           </View>
         )}
+
       </ScrollView>
     </View>
   );
@@ -1881,26 +1952,37 @@ const styles = StyleSheet.create({
   },
 
   smallBtn: {
-    backgroundColor: "#008DFF",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
     paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 8,
+    backgroundColor: "#2563eb",
+    borderRadius: 6,
+    marginRight: 8,
   },
+
   smallBtnText: {
-    color: "white",
-    fontWeight: "600",
+    color: "#fff",
+    fontSize: 14,
+    marginLeft: 6,
   },
 
   docBtn: {
-    backgroundColor: "#4B5563",
-    padding: 10,
-    borderRadius: 8,
+    flexDirection: "row",
     alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: "#059669",
+    borderRadius: 6,
   },
+
   docBtnText: {
     color: "#fff",
-    fontWeight: "600",
+    fontSize: 14,
+    marginLeft: 6,
   },
+
+
 
   previewImage: {
     width: 130,
@@ -2003,4 +2085,17 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   deleteText: { color: "#FF4D4D", fontWeight: "700" },
+  imageWrapper: {
+    position: "relative",
+    marginTop: 8,
+  },
+
+  removeImageBtn: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+  },
+
 });

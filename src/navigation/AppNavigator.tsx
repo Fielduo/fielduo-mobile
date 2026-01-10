@@ -64,7 +64,7 @@ const MainTabsWithLayout = () => {
   );
 };
   return (
-     <Stack.Navigator screenOptions={{ headerShown: false }}>
+     <Stack.Navigator id="root" screenOptions={{ headerShown: false }}>
       {!user ? (
         <Stack.Screen name="AuthStack" component={AuthNavigator} />
       ) : (
