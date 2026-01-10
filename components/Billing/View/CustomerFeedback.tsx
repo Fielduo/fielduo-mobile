@@ -240,7 +240,9 @@ const renderFeedbackCard = ({ item }: { item: CustomerFeedback }) => {
             <Text style={styles.subTitle}>BILLING</Text>
             <Text style={styles.title}>Customer Feedback</Text>
             <Text style={styles.subtitle}>
-              {loading ? "Loading..." : "Updated just now"}
+              {loading
+                ? "Loading..."
+                : `${filteredFeedbacks.length} items - Updated just now`}
             </Text>
           </View>
 

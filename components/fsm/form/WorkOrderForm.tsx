@@ -222,7 +222,14 @@ export default function CreateWorkOrderForm() {
       };
 
       console.log("📦 Submitting payload:", payload);
-      await api.post("/work_order", payload);
+      if (isEditMode && workorder?.id) {
+        // ✅ UPDATE existing work order
+        await api.put(`/work_order/${workorder.id}`, payload);
+      } else {
+        // Create new Work ORDER
+        await api.post("/work_order", payload);
+      }
+
       navigation.goBack();
     } catch (error: any) {
       console.error("❌ Error creating work order:", error);
@@ -280,7 +287,10 @@ export default function CreateWorkOrderForm() {
       // --- Basic fields ---
       setTitle(workorder.title || "");
       setDescription(workorder.description || "");
-      setNotes(workorder.long_description || "");
+      setLongDescription(workorder.long_description || "");
+
+      // --- Notes ---
+      setNotes(workorder.notes || "");
 
       // --- Dropdown fields ---
       setStatus(workorder.status_id || "");
@@ -416,7 +426,7 @@ export default function CreateWorkOrderForm() {
       <ScrollView style={styles.container}>
         {/* Section Header */}
         <View style={styles.headerRow}>
-          <Text style={styles.subHeader}>ASSET DETAILS</Text>
+          <Text style={styles.subHeader}>WORK ORDER DETAILS</Text>
           {isViewMode && (
             <TouchableOpacity
               style={styles.editSmallButton}
@@ -561,7 +571,9 @@ export default function CreateWorkOrderForm() {
               <Text style={styles.readOnlyText}>{description || "-"}</Text>
             </View>
           ) : (
-            <View style={styles.voiceInputWrapper}> {/* Voice Input Wrapper */}
+            <View style={styles.voiceInputWrapper}>
+              {" "}
+              {/* Voice Input Wrapper */}
               <TextInput
                 style={[styles.input, styles.shortDescriptionInput]}
                 placeholder="Describe briefly about the work order"
@@ -600,10 +612,12 @@ export default function CreateWorkOrderForm() {
 
           {isViewMode ? (
             <View style={styles.readOnlyView}>
-              <Text style={styles.readOnlyText}>{notes || "-"}</Text>
+              <Text style={styles.readOnlyText}>{longDescription || "-"}</Text>
             </View>
           ) : (
-            <View style={styles.voiceInputWrapper}> {/*Voice Input Wrapper*/}
+            <View style={styles.voiceInputWrapper}>
+              {" "}
+              {/*Voice Input Wrapper*/}
               <TextInput
                 style={[styles.input, styles.textArea]}
                 placeholder="Describe about the work order in detail"
@@ -1063,7 +1077,9 @@ export default function CreateWorkOrderForm() {
               <Text style={styles.readOnlyText}>{notes || "-"}</Text>
             </View>
           ) : (
-            <View style={styles.voiceInputWrapper}>  {/* Voice Input Wrapper */}
+            <View style={styles.voiceInputWrapper}>
+              {" "}
+              {/* Voice Input Wrapper */}
               <TextInput
                 style={[styles.input, styles.textArea]}
                 placeholder="Enter detailed description"
@@ -1157,7 +1173,7 @@ export default function CreateWorkOrderForm() {
           {(isCreateMode || isEditMode) && (
             <TouchableOpacity style={styles.saveButton} onPress={handleSubmit}>
               <Text style={styles.buttonText}>
-                {isCreateMode ? "Save Asset" : "Update Asset"}
+                {isEditMode ? "Update Work Order" : "Create Work Order"}
               </Text>
             </TouchableOpacity>
           )}
@@ -1170,6 +1186,14 @@ export default function CreateWorkOrderForm() {
               <Text style={styles.cancelText}>Delete</Text>
             </TouchableOpacity>
           )}
+        </View>
+        <View>
+          <TouchableOpacity
+            style={styles.cancelBtn}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.cancelBtnText}>Cancel</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>
@@ -1279,7 +1303,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   cancelButton: {
-    marginTop: 10,
+    marginTop: 5,
     backgroundColor: "#535351",
     paddingVertical: 12,
     borderRadius: 4,
@@ -1292,6 +1316,18 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 12,
     color: "#101318CC",
+  },
+  cancelBtn: {
+    backgroundColor: "#4B5563",
+    paddingVertical: 14,
+    borderRadius: 6,
+    alignItems: "center",
+  },
+
+  cancelBtnText: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+    fontSize: 14,
   },
   readOnlyView: {
     paddingVertical: 14,
