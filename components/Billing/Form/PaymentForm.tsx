@@ -244,7 +244,10 @@ export default function CreatePayment() {
         onBackPress={() => navigation.goBack()}
       />
 
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* HEADER ROW */}
         <View style={styles.headerRow}>
           <Text style={styles.subHeader}>PAYMENT INFORMATION</Text>
@@ -289,7 +292,11 @@ export default function CreatePayment() {
 
               {showInvoiceDropdown && (
                 <View style={styles.dropdownList}>
-                  <ScrollView style={{ maxHeight: 200 }}>
+                  <ScrollView
+                    style={{ maxHeight: 200 }}
+                    nestedScrollEnabled
+                    keyboardShouldPersistTaps="handled"
+                  >
                     {invoiceResults.map((inv) => {
                       const amt =
                         (inv as any).amount ??
@@ -638,16 +645,18 @@ const styles = StyleSheet.create({
 
   dropdownList: {
     position: "absolute",
-    top: 52,
+    top: 50,
     width: "100%",
+    left: 0,
+    right: 0,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E5E7EB",
     borderRadius: 6,
-    zIndex: 999,
+    zIndex: 9999,
 
     // Android shadow
-    elevation: 4,
+    elevation: 6,
 
     // iOS shadow
     shadowColor: "#000",
