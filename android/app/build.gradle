@@ -95,13 +95,13 @@ packagingOptions {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.santhiyak.fielduomobile'
+    namespace 'com.fielduo.app'
 
     defaultConfig {
-        applicationId 'com.santhiyak.fielduomobile'
+        applicationId 'com.fielduo.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2
+        versionCode 1
         versionName '1.0.1'
 
         buildConfigField 'String', 'REACT_NATIVE_RELEASE_LEVEL', "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""

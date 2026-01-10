@@ -121,25 +121,25 @@ export default function TripLog() {
       />
 
       <ScrollView style={styles.container}>
-         {
-    offlineMode && (
-      <Text style={{ color: "red", fontSize: 12, marginBottom: 10 }}>
-        Offline mode - Showing last 14 days trip logs only
-      </Text>
-    )
-  }
+        {
+          offlineMode && (
+            <Text style={{ color: "red", fontSize: 12, marginBottom: 10 }}>
+              Offline mode - Showing last 14 days trip logs only
+            </Text>
+          )
+        }
 
         {/* Header */}
         <View style={styles.headerRow}>
           <View>
-              <Text style={styles.subTitle}>FSM</Text>
+            <Text style={styles.subTitle}>FSM</Text>
             <Text style={styles.headerTitle}>Trip Logs</Text>
             <Text style={styles.headerMeta}>
               {displayedTrips.length} logs • Updated just now
             </Text>
           </View>
 
-       <View style={{ position: 'relative' }}>
+          <View style={{ position: 'relative' }}>
             <TouchableOpacity
               style={styles.filterBtn}
               onPress={() => setDropdownOpen((prev) => !prev)}
@@ -177,77 +177,77 @@ export default function TripLog() {
         </View>
 
         {loading ? (
-  <ActivityIndicator size="large" color="#6B4EFF" />
-) : (
-  displayedTrips.map((trip) => (
-    <SwipeCard
-      key={trip.id}
-      onEdit={() =>
-        navigation.navigate("TripLogForm", {
-          mode: "edit",
-          data: trip,
-        })
-      }
-      onView={() => {
-        // 🔥 recently viewed update
-        setRecentTrips((prev) => {
-          const updated = [
-            trip,
-            ...prev.filter((t) => t.id !== trip.id),
-          ];
-          return updated.slice(0, 20);
-        });
+          <ActivityIndicator size="large" color="#6B4EFF" />
+        ) : (
+          displayedTrips.map((trip) => (
+            <SwipeCard
+              key={trip.id}
+              onEdit={() =>
+                navigation.navigate("TripLogForm", {
+                  mode: "edit",
+                  data: trip,
+                })
+              }
+              onView={() => {
+                // 🔥 recently viewed update
+                setRecentTrips((prev) => {
+                  const updated = [
+                    trip,
+                    ...prev.filter((t) => t.id !== trip.id),
+                  ];
+                  return updated.slice(0, 20);
+                });
 
-        navigation.navigate("TripLogForm", {
-          mode: "view",
-          data: trip,
-        });
-      }}
-    >
-      <View style={styles.card}>
-        <View style={styles.rowBetween}>
-          <View>
-            <Text style={styles.label}>Trip ID</Text>
-            <Text style={styles.value}>
-              {trip.trip_id || "-"}
-            </Text>
-          </View>
+                navigation.navigate("TripLogForm", {
+                  mode: "view",
+                  data: trip,
+                });
+              }}
+            >
+              <View style={styles.card}>
+                <View style={styles.rowBetween}>
+                  <View>
+                    <Text style={styles.label}>Trip ID</Text>
+                    <Text style={styles.value}>
+                      {trip.trip_id || "-"}
+                    </Text>
+                  </View>
 
-          <View>
-            <Text style={styles.label}>Date</Text>
-            <Text style={styles.value}>
-              {new Date(trip.timestamp).toLocaleDateString()}
-            </Text>
-          </View>
-        </View>
+                  <View>
+                    <Text style={styles.label}>Date</Text>
+                    <Text style={styles.value}>
+                      {new Date(trip.timestamp).toLocaleDateString()}
+                    </Text>
+                  </View>
+                </View>
 
-        <View style={styles.rowBetween}>
-          <View>
-            <Text style={styles.smallLabel}>Work Order</Text>
-            <Text style={styles.smallValue}>
-              {trip.work_order_number || "-"}
-            </Text>
-          </View>
+                <View style={styles.rowBetween}>
+                  <View>
+                    <Text style={styles.smallLabel}>Work Order</Text>
+                    <Text style={styles.smallValue}>
+                      {trip.work_order_number || "-"}
+                    </Text>
+                  </View>
 
-          <View>
-            <Text style={styles.smallLabel}>Site</Text>
-            <Text style={styles.smallValue}>
-              {trip.site_name ||
-                `${trip.latitude}, ${trip.longitude}`}
-            </Text>
-          </View>
+                  <View>
+                    <Text style={styles.smallLabel}>Site</Text>
+                    <Text style={styles.smallValue}>
+                      {trip.site_name ||
+                        `${trip.latitude}, ${trip.longitude}`}
+                    </Text>
+                  </View>
 
-          <View>
-            <Text style={styles.smallLabel}>Status</Text>
-            <Text style={styles.smallValue}>
-              {getStatusName(trip.job_status_id)}
-            </Text>
-          </View>
-        </View>
-      </View>
-    </SwipeCard>
-  ))
-)}
+                  <View>
+                    <Text style={styles.smallLabel}>Status</Text>
+                    <Text style={styles.smallValue}>
+                      {getStatusName(trip.job_status_id)}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </SwipeCard>
+          ))
+        )}
 
 
       </ScrollView>
@@ -290,18 +290,18 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     padding: 20,
     marginBottom: 12,
-     // ✅ Full border
-  borderWidth: 1,
-  borderColor: "#E0E0E0",
+    // ✅ Full border
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
 
-  // Shadow (iOS)
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 1 },
-  shadowOpacity: 0.1,
-  shadowRadius: 3,
+    // Shadow (iOS)
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
 
-  // Shadow (Android)
-  elevation: 2,
+    // Shadow (Android)
+    elevation: 2,
     marginTop: 10,
   },
   rowBetween: {
@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "500",
   },
-    subTitle: {
+  subTitle: {
     color: "#6234E2",
     fontSize: 12,
     fontWeight: "600",

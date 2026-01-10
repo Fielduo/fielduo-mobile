@@ -34,15 +34,18 @@ const checkMic = async () => {
   };
 
   // 🎧 RESULT EVENT
-  useSpeechRecognitionEvent("result", (event) => {
-    const transcript = event.results?.[0]?.transcript;
-    console.log("🎧 RESULT:", transcript);
+useSpeechRecognitionEvent("result", (event) => {
+  const transcript = event.results?.[0]?.transcript;
+  const isFinal = event.isFinal;
 
-    if (transcript) {
-      setText(transcript);
-      stop(); // auto stop after result
-    }
-  });
+  console.log("🎧 RESULT:", transcript, "final:", isFinal);
+
+  if (transcript && isFinal) {
+    setText(transcript);
+    stop(); // stop only on FINAL result
+  }
+});
+
 
   // ❌ ERROR EVENT
   useSpeechRecognitionEvent("error", (e) => {

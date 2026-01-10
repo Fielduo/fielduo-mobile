@@ -339,9 +339,7 @@ export default function DashboardScreen() {
             </Text>
           </View>
 
-          <View style={styles.bell}>
-            <Ionicons name="notifications-outline" size={20} color="#000" />
-          </View>
+
         </View>
 
         {/* Stats */}

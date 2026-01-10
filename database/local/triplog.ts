@@ -26,8 +26,16 @@ export const saveTripsToLocalDB = async (trips: any[]) => {
       const existing = await tripCollection
         .query(Q.where("trip_id", tripId))
         .fetch();
+      const normalizedTrip = {
+        ...trip,
+        job_assignment_number:
+          trip.job_assignment_number ??
+          trip.work_order_number ??
+          trip.trip_id,
+      };
+      const data = JSON.stringify(normalizedTrip);
 
-      const data = JSON.stringify(trip);
+
       const timestamp = trip.timestamp
         ? new Date(trip.timestamp).getTime()
         : Date.now();

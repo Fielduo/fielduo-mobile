@@ -7,16 +7,14 @@
     "icon": "./assets/images/icon_v2.png",
     "scheme": "fielduomobile",
     "userInterfaceStyle": "automatic",
-
     "splash": {
       "image": "./assets/images/icon_v2.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.santhiyak.fielduomobile",
+      "bundleIdentifier": "com.fielduo.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "Location is required to track field work",
@@ -25,11 +23,11 @@
         "NSPhotoLibraryUsageDescription": "Photo access is required",
         "NSMicrophoneUsageDescription": "Voice to text conversion",
         "NSSpeechRecognitionUsageDescription": "Voice to text conversion"
+      
       }
     },
-
     "android": {
-      "package": "com.santhiyak.fielduomobile",
+      "package": "com.fielduo.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon_v2.png",
         "backgroundColor": "#ffffff"
@@ -40,26 +38,25 @@
         "ACCESS_BACKGROUND_LOCATION",
         "FOREGROUND_SERVICE",
         "android.permission.RECORD_AUDIO"
+        
       ],
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
-
     "web": {
       "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
-
     "plugins": [
       "expo-sqlite",
       "expo-speech-recognition",
       "@rnmapbox/maps"
+      
     ],
-
     "extra": {
       "MAPBOX_ACCESS_TOKEN": "pk.eyJ1Ijoia2lydXRoaWdhbmUiLCJhIjoiY21oYXJyeXdqMWozZjJsczV5dDlycnd5NyJ9.Bk5zF4AQxBeWBJjHux3UHQ",
       "eas": {
-        "projectId": "ae17c76e-4467-4ebe-91a6-a0f006ff0a7d"
+        "projectId": "4bd2a9e1-5424-4205-a933-a44bccc485ba"
       }
     }
   }

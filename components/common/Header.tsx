@@ -1,39 +1,40 @@
-import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import React from 'react';
-import { View, Image, TouchableOpacity, StyleSheet } from 'react-native';
-
+import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import React from "react";
+import { View, Image, TouchableOpacity, StyleSheet } from "react-native";
 
 const Header = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
+
+  const openNotifications = () => {
+  navigation.navigate("Notifications");
+};
 
   return (
     <View style={styles.header}>
       <View style={styles.leftSection}>
         <Image
-             source={require('../../assets/images/headericon.png')}
+          source={require("../../assets/images/headericon.png")}
           style={styles.logo}
         />
       </View>
-      {/* <View style={styles.icons}>
-        <TouchableOpacity style={styles.iconCircle}>
-          <Ionicons name="moon-outline" size={20} color="#101318" />
-        </TouchableOpacity>
 
-        <TouchableOpacity style={styles.iconCircle}>
+      <View style={styles.icons}>
+        <TouchableOpacity style={styles.iconCircle} onPress={openNotifications}>
           <Ionicons name="notifications-outline" size={20} color="#101318" />
         </TouchableOpacity>
-      </View> */}
+      </View>
     </View>
   );
 };
+
 
 const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    
+
     paddingVertical: 16,
   },
   logo: {

@@ -6,7 +6,7 @@ class ApiWrapper {
 
   constructor() {
     this.axiosInstance = axios.create({
-      baseURL: "https://api-staging.fielduo.com/v1",   //      baseURL: "http://10.0.2.2:5000/v1",   //https://fielduo.com/v1
+      baseURL: "https://api-staging.fielduo.com/v1", //emulatorbaseURL: "http://10.0.2.2:5000/v1",// realtime mobile(local) http://192.168.29.29:5000/v1
       timeout: 15000,
       headers: { "Content-Type": "application/json" },
     });
